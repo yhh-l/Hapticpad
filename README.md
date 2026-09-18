@@ -1,5 +1,9 @@
 # CNCDan - Haptic Pad
 
+[中文复刻、国内采购与 3D 打印说明](README_CN.md)
+
+> This repository is a fork/reproduction of the original [dmcke5/Hapticpad](https://github.com/dmcke5/Hapticpad) project. Original mechanical, PCB and software designs belong to dmcke5 / CNCDan and remain under the original `CERN-OHL-S-2.0` license.
+
 ![Alt text](title.png "Haptic Pad")
 
 A 6 button macropad with a display for button labels and a mouse knob with haptic feedback!
