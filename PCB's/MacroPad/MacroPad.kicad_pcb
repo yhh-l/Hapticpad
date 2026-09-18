@@ -1217,7 +1217,7 @@
 				)
 			)
 		)
-		(property "Value" "EVQ-Q2B03W"
+		(property "Value" "EVQ-Q2K03W"
 			(at 0.033211 3.745233 0)
 			(layer "F.Fab")
 			(uuid "31e71738-e5ba-4f47-8c02-d4225fc0cfb7")
@@ -12723,7 +12723,7 @@
 				)
 			)
 		)
-		(property "Value" "EVQ-Q2B03W"
+		(property "Value" "EVQ-Q2K03W"
 			(at 0.033211 3.745233 0)
 			(layer "F.Fab")
 			(uuid "fb6d6494-5014-4997-a82c-3a2fe2eca54f")
