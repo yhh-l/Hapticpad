@@ -55,6 +55,13 @@
 | M2×6 沉头 | 4 个；这是对原 README 的勘误 |
 | 编码器固定螺丝 | 建议买 M2×4/6/8 自攻螺丝套装，实装再选长度 |
 
+## 嘉立创 PCB 下单说明
+
+> [!IMPORTANT]
+> 本次只下单 **裸 PCB**，不做 SMT 贴片。在嘉立创页面上，主板和控制板分别建单，各自只上传对应的 **PCB Gerber ZIP** 即可；不需要上传 BOM、CPL/坐标文件，也不需要开启 PCB Assembly/SMT 贴片。
+>
+> 如果以后改为嘉立创代贴 PCBA，才需要另外上传 BOM 和 CPL/坐标文件并核对料号、封装及方向；这不在本次下单范围内。
+
 ## 3D 打印说明
 
 打印 `3D Files/STL's` 中的所有文件，其中：
@@ -81,4 +88,3 @@
 - [Issue #3：M2×6 沉头螺丝被误写为 M3×6](https://github.com/dmcke5/Hapticpad/issues/3)
 - [Issue #4：编码器固定螺丝在 BOM 中遗漏](https://github.com/dmcke5/Hapticpad/issues/4)
 - [Issue #12：显示屏 / SD 供电问题讨论](https://github.com/dmcke5/Hapticpad/issues/12)
-
