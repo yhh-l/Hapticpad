@@ -18,7 +18,7 @@
 - `C1`：10nF / 50V / X7R / 0603，对应 [LCSC C307346](https://www.lcsc.com/product-detail/C307346.html)。
 - `S1-S2`：已按本次采购改为 Panasonic [`EVQ-Q2K03W`](https://www.digikey.com/en/products/detail/panasonic-industry/EVQ-Q2K03W/762893)，6.5×6.0mm 顶按 SMD；当前未填写 LCSC 料号，上传 PCBA 时需要在嘉立创页面手动匹配、客供或设为不贴。
 - KiCad 内部仍保留旧库名 `SW_EVQ-Q2B02W`，但元件 Value 已更新为 `EVQ-Q2K03W`。现有焊盘中心距为 6.8×4.0mm，与 K03W 的 J 型引脚间距一致，因此不改铜层和 Gerber。
-- CPL 坐标、层和旋转角来自当前 `.kicad_pcb`；所有列出的器件都位于顶层。LED 按环形布局每颗递增 18°。
+- CPL 坐标、层和旋转角来自当前 `.kicad_pcb`，并按 Gerber 坐标系执行 `KiCad X/Y → Gerber X/-Y` 转换；所有列出的器件都位于顶层。LED 按环形布局每颗递增 18°。
 
 > [!WARNING]
 > BOM/CPL 能被识别不代表方向一定正确。真正下 PCBA 单时，必须在嘉立创贴片预览中逐一检查 `D1-D20` 的 1 脚/DIN-DOUT 方向，并确认 `S1-S2` 外形和焊盘重合。若平台匹配了替代料，也要重新核对封装和方向后再付款。
