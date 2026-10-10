@@ -28,7 +28,7 @@ A 6 button macropad with a display for button labels and a mouse knob with hapti
 The list below reflects the parts selected for this fork/build. Links point to the exact part or the closest stable manufacturer/distributor page available.
 
 - 1x [Waveshare 2.42-inch 128x64 OLED display](https://www.waveshare.com/product/ai/2.42inch-oled-module.htm)
-- 1x [MT6701 magnetic encoder module](https://www.aliexpress.com/item/1005007469177411.html), configured for ABZ incremental output at 1024 PPR
+- 1x 12 mm version of the [MT6701 magnetic encoder module](https://www.aliexpress.com/item/1005007469177411.html), configured for ABZ incremental output at 1024 PPR
   - Use the encoder's dedicated diametrically/radially magnetized magnet. The 6x1mm magnets below are only for the wheel coupling.
 - 1x [2804 100KV brushless gimbal motor](https://www.aliexpress.com/item/1005006008489660.html) with a hollow shaft
 - 6x [Kailh Choc V1 low-profile switches](https://www.aliexpress.com/item/1005005066585322.html)
@@ -44,7 +44,7 @@ The list below reflects the parts selected for this fork/build. Links point to t
 The following parts are optional if you want to include the LEDs:
 
 - 20x [Worldsemi WS2812B-B/W, 5050 / PLCC4, LCSC C114586](https://www.lcsc.com/zh-TW/product-detail/RGB-LEDs_Worldsemi-WS2812B-B-W_C114586.html)
-  - Do not use the WS2812B 2020 package; it does not match the PCB footprint.
+  - Do not use the WS2812B 2020 package; it does not match the PCB footprint. On this PCB with the selected 5050 LED, the LED cut corner is diagonally opposite the PCB `1` marking. See the [illustrated orientation guide](README_CN.md).
 - 20x [0.1uF (100nF) 0603 capacitors](https://www.aliexpress.com/item/32966526545.html)
 
 #### Hardware
@@ -53,8 +53,9 @@ The following parts are optional if you want to include the LEDs:
 - 3x [M3x6 socket-head cap screws](https://www.aliexpress.com/w/wholesale-m3x6-socket-head-screw.html)
 - 2x [M3x10 socket-head cap screws](https://www.aliexpress.com/w/wholesale-m3x10-socket-head-screw.html)
 - 10x [M2.5x4 socket-head cap screws](https://www.aliexpress.com/w/wholesale-m2.5x4-socket-head-screw.html)
-- 4x [M2x6 countersunk screws](https://www.aliexpress.com/w/wholesale-m2x6-countersunk-screw.html) (the original README incorrectly listed M3x6)
-- 2x [M2x6 pan-head/self-tapping screws](https://www.aliexpress.com/w/wholesale-m2x6-self-tapping-screw.html) for the encoder mount (missing from the original BOM; an M2x4/6/8 assortment is useful if fit is uncertain)
+- 4x [M2x6 countersunk screws](https://www.aliexpress.com/w/wholesale-m2x6-countersunk-screw.html) (the original README incorrectly listed M3x6; these are separate from the encoder screws)
+- M2.5x4 screws for the display, M2.5x6 screws for the motor, and M2x4 screws for the 12 mm encoder module in this build; confirm counts and head styles against the physical mounting holes before ordering.
+- 2 small ring washers; verify size, material, and mounting location on the physical build. Do not conflate these with the two printed `PCB Spacer.STL` parts.
 
 ### Printing Instructions
 
