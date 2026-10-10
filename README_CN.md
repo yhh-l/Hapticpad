@@ -4,6 +4,7 @@
 > 本仓库是对 [dmcke5/Hapticpad](https://github.com/dmcke5/Hapticpad) 的复刻与国内物料本地化整理。原始机械、PCB 和软件设计归原作者 **dmcke5 / CNCDan** 所有，原项目采用 `CERN-OHL-S-2.0` 许可证。本文档只记录本次复刻的采购选择、已知勘误和 3D 打印注意事项，不声称为原创项目。
 
 - [English README](README.md)
+- [Hapticpad v2 中文固件（实验版，未实机验证）](Software/Chinese-V2-Experimental/README_CN.md)
 - [原始项目](https://github.com/dmcke5/Hapticpad)
 - [原作者演示视频](https://youtu.be/bNUKRJQjuvQ)
 
