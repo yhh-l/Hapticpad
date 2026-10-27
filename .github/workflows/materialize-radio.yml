@@ -1,0 +1,30 @@
+name: Materialize validated radio UF2
+on:
+  push:
+    branches: ['codex/radio-hud-artifact']
+    paths: ['.github/workflows/materialize-radio.yml']
+permissions:
+  actions: read
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Hapticpad-V1-CN-1.9-RADIO
+          path: radio-artifact
+          run-id: 40532171236
+          github-token: ${{ github.token }}
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs=require('fs');
+            const folder='radio-artifact';
+            const find=(dir)=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(x=>x.isDirectory()?find(dir+'/'+x.name):[dir+'/'+x.name]);
+            const files=find(folder).filter(x=>x.endsWith('.uf2'));
+            if(files.length!==1)throw new Error('Expected exactly one UF2');
+            const bytes=fs.readFileSync(files[0]);
+            const hash=require('crypto').createHash('sha256').update(bytes).digest('hex');
+            await github.rest.repos.createOrUpdateFileContents({...context.repo,branch:context.ref.replace('refs/heads/',''),path:'custom/radio-v1/build/Hapticpad_V1_CN_1.9_RADIO.uf2',message:'Store CI-validated radio firmware '+hash,content:bytes.toString('base64')});
+            console.log('Firmware SHA256 '+hash+' bytes '+bytes.length);
