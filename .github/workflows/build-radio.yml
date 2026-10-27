@@ -1,0 +1,32 @@
+name: Build radio HUD firmware
+on:
+  push:
+    branches: ['codex/radio-hud-input-fix*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install matching board and libraries
+        run: |
+          arduino-cli config init
+          arduino-cli core update-index --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+          arduino-cli core install rp2040:rp2040@6.3.1 --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+          arduino-cli lib install 'Simple FOC@2.3.5' 'U8g2@2.35.30' 'Adafruit NeoPixel@1.15.5' 'FastLED@3.9.15'
+      - name: Test real button dispatcher and HUD parser
+        run: |
+          python3 custom/radio-v1/tests/check_buttons.py
+          g++ -std=c++17 -Wall -Wextra -Werror -I custom/radio-v1/MacroPad custom/radio-v1/tests/check_hud.cpp -o /tmp/check-hud
+          /tmp/check-hud
+      - name: Compile RP2040 Plus 16 MB
+        run: |
+          arduino-cli compile --fqbn 'rp2040:rp2040:waveshare_rp2040_plus:flash=16777216_0,usbstack=tinyusb' --output-dir build/radio-v1 custom/radio-v1/MacroPad
+          sha256sum build/radio-v1/*.uf2 > build/radio-v1/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hapticpad-V1-CN-1.9-RADIO
+          path: build/radio-v1/
