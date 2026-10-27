@@ -1,3 +1,5 @@
+> Chinese V1-CN-1.8 chord firmware + Mac/Windows local toolbox: [Downloads](https://github.com/yhh-l/Hapticpad/releases/tag/v1-cn-1.8) · [中文说明](Software/Chinese-V1-1.8/使用说明.md). Host-verified; hardware acceptance pending. Existing firmware directories are preserved.
+
 # CNCDan - Haptic Pad
 
 [中文复刻、国内采购与 3D 打印说明](README_CN.md)

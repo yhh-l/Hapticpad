@@ -1,0 +1,22 @@
+{
+  "version": "V1-CN-1.8",
+  "toolbox_version": "1.8",
+  "status": "本地编译与测试版，未刷入设备，实机验收待完成",
+  "sha256": "ae49361c8115e6d48bee7f425e676473263199008ebe14ba385421027c10f020",
+  "size": 800256,
+  "flash_bytes": 369156,
+  "ram_bytes": 35664,
+  "configuration": "installed-config.xml",
+  "device_programmed": false,
+  "sd_written": false,
+  "physical_tested": false,
+  "windows_device_tested": false,
+  "standby_after_ms": 180000,
+  "pet_quotes_per_character": 576,
+  "max_profiles": 32,
+  "config_max_bytes": 65536,
+  "max_bindings_per_profile": 255,
+  "default_bindings_per_profile": 63,
+  "default_navigation": "短7下一配置，短8上一配置；长7配置选择，长8设置；设置中长7放弃退出、长8保存退出",
+  "build_fqbn": "rp2040:rp2040:waveshare_rp2040_plus:flash=16777216_0,usbstack=tinyusb"
+}

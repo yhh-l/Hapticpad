@@ -1,3 +1,8 @@
+> **新增：V1-CN-1.8 组合键版（主机验证，待实机验收）**
+> 长按7进入配置选择，长按8进入设置；支持1～8键组合，保留惯性续转、宠物、拖尾和待机。
+> [下载整包](https://github.com/yhh-l/Hapticpad/releases/tag/v1-cn-1.8) · [刷入与操作说明](Software/Chinese-V1-1.8/使用说明.md)
+> 本次未刷设备、未写SD。请先备份原SD配置，再按说明操作。
+
 # Hapticpad 中文复刻说明
 
 > [!IMPORTANT]
