@@ -57,3 +57,10 @@
 新版网页工具箱也经本机浏览器检测，显示V1-CN-1.10.0-SD、Mac中刻度、力反馈开启、SD正常及键盘／鼠标就绪。
 
 本版通过上述专项实机测试；Windows浏览器USB／目录操作未在实体Windows电脑复测，相关模型及快捷键代码经过主机回归，不以Mac实机结果代替Windows实测。5MB压力文件保存仍约一分钟，期间显示保存／核对提示，勿断电；日常59KB配置与本次用户实体验收不是这一压力规模。
+
+## GitHub自动构建补充
+
+首次Linux CI中，生产按键／HUD／数字宏／SD解析保存测试通过，但3项Mac USB模拟测试因没有显式模拟sys.platform而报错。修正仅涉及测试环境模拟，没有修改已刷入并验收的固件。修正后本机Mac及模拟Linux各40项Python测试通过，GitHub主机回归及RP2040固件构建也通过。
+
+构建记录：https://github.com/yhh-l/Hapticpad/actions/runs/40657393914
+测试脚本修正提交：b03d7e748c9b0cfb19cb9753af44c36e97daeb58（codex/sd-profile-streaming分支）。固件标签和UF2保持原实机验收版本；更新后的工具箱附件包含测试脚本修正。

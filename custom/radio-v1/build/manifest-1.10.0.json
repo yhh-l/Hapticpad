@@ -39,7 +39,13 @@
     "host_js_tests": 6,
     "button_hud_numeric_storage_regressions": true,
     "toolbox_native_device_detection": true,
-    "final_sd_hid_motor_led_ready": true
+    "final_sd_hid_motor_led_ready": true,
+    "github_actions": {
+      "success": true,
+      "run_url": "https://github.com/yhh-l/Hapticpad/actions/runs/40657393914",
+      "code_commit": "b03d7e748c9b0cfb19cb9753af44c36e97daeb58",
+      "firmware_source_unchanged_since_device_test": true
+    }
   },
   "limitations": [
     "5MB压力配置保存约一分钟；保存与核对期间不要断电",
