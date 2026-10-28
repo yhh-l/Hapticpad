@@ -1,0 +1,49 @@
+{
+  "version": "V1-CN-1.10.0-SD",
+  "date": "2026-10-28",
+  "source_branch": "codex/sd-profile-streaming",
+  "sha256": "6c6198a1922f14d28ba435e60c4db5bb7f687ba97989d170895808ca00d812c9",
+  "uf2_bytes": 821760,
+  "program_bytes": 375268,
+  "static_ram_bytes": 50416,
+  "board": "Waveshare RP2040 Plus 16MB",
+  "fqbn": "rp2040:rp2040:waveshare_rp2040_plus:flash=16777216_0,usbstack=tinyusb",
+  "arduino_pico": "6.3.1",
+  "storage": {
+    "mode": "sd-indexed-current-profile",
+    "max_profiles": 256,
+    "max_config_bytes": 8388608,
+    "max_profile_bytes": 65536,
+    "max_settings_bytes": 4096,
+    "core1_stack_bytes": 8192
+  },
+  "tests": {
+    "device_programmed": true,
+    "flash_readback_verified": true,
+    "sd_256_profiles_bytes": 5123514,
+    "sd_single_profile_near_limit_bytes": 64996,
+    "sd_save_seconds": [
+      62.396,
+      61.478
+    ],
+    "other_profile_bytes_unchanged": true,
+    "numeric_macros_preserved": true,
+    "physical_menu_save_user_confirmed": true,
+    "physical_save_sd_readback_brightness": [
+      35,
+      45
+    ],
+    "original_24_profiles_restored_byte_for_byte": true,
+    "original_active_profile": "Mac中刻度",
+    "host_python_tests": 40,
+    "host_js_tests": 6,
+    "button_hud_numeric_storage_regressions": true,
+    "toolbox_native_device_detection": true,
+    "final_sd_hid_motor_led_ready": true
+  },
+  "limitations": [
+    "5MB压力配置保存约一分钟；保存与核对期间不要断电",
+    "Windows浏览器USB/目录流程未在实体Windows电脑复测；Mac实机与主机回归结果分别记录"
+  ],
+  "validation": "../VALIDATION-1.10.0.md"
+}

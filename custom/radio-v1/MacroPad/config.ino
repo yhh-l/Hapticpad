@@ -1,4 +1,33 @@
-String configXML;
+ConfigIndex configIndex;
+String globalSettings;
+uint32_t loadedProfileBytes=0;
+int minimumStorageStackFree=8192;
+void observeStorageStack() {
+#if defined(ARDUINO_ARCH_RP2040)
+  minimumStorageStackFree=min(minimumStorageStackFree,rp2040.getFreeStack());
+#endif
+}
+class SDConfigReader {
+  FsFile &file;uint8_t buffer[512];unsigned used=0,count=0;uint32_t offset=0;
+ public:
+  explicit SDConfigReader(FsFile &source):file(source){}
+  int read(){if(used==count){observeStorageStack();int n=file.read(buffer,sizeof(buffer));if(n<=0)return n==0?-1:-2;used=0;count=n;}++offset;return buffer[used++];}
+  uint32_t position()const{return offset;}
+};
+bool indexConfigFile(FsFile &file,ConfigIndex &index) {
+  if(!file || !file.size() || file.size()>SD_MAX_CONFIG_BYTES || !file.seekSet(0))return false;
+  SDConfigReader reader(file);
+  return scanConfig(reader,index) && index.bytes==file.size();
+}
+String readConfigSpan(ConfigSpan span) {
+  if(span.end<=span.begin || span.size()>SD_MAX_PROFILE_BYTES)return "";
+  FsFile file=SD.open("/config.xml",O_RDONLY);
+  String result;
+  if(!file || file.size()!=configIndex.bytes || !file.seekSet(span.begin) || !result.reserve(span.size()+1))return "";
+  uint8_t buffer[256];uint32_t left=span.size();
+  while(left){unsigned count=min(left,uint32_t(sizeof(buffer)));int n=file.read(buffer,count);if(n!=(int)count)return "";if(!result.concat((const char*)buffer,count))return "";left-=count;}
+  return result;
+}
 String textTag(const String &block, const char *tag, const String &fallback = "") {
   String start = String("<") + tag + ">", end = String("</") + tag + ">";
   int a = block.indexOf(start);
@@ -34,14 +63,10 @@ void colorValue(const String &text, uint8_t color[3]) {
   }
 }
 String profileBlock(int index) {
-  int position = configXML.indexOf("<Profiles>");
-  if (position < 0) return "";
-  for (int i = 0; i <= index; ++i) {
-    position = configXML.indexOf("<Profile ", position + 1);
-    if (position < 0) return "";
-  }
-  int end = configXML.indexOf("</Profile>", position);
-  return end < 0 ? "" : configXML.substring(position, end + 10);
+  if(index<0 || unsigned(index)>=configIndex.count)return "";
+  String block=readConfigSpan(configIndex.profiles[index]);
+  loadedProfileBytes=block.length();
+  return block;
 }
 bool readActions(const String &item, uint8_t *actions, uint16_t *delays) {
   int cursor = 0;
@@ -70,7 +95,7 @@ bool readProfile(int index, Profile &output) {
   copyText(next.displayText, xmlDecode(textTag(block, "DisplayText")));
   String scene = textTag(block, "DisplayScene", "Dog");
   next.displayScene = scene == "Text" ? 0 : scene == "Person" ? 2 : scene == "Off" ? 3 : 1;
-  String global = textTag(configXML, "Settings");
+  const String &global = globalSettings;
   next.ledMode = parseLED(textTag(block, "LED_Mode", textTag(global, "LED_Mode", "Solid")));
   next.brightness = textTag(block, "LED_Brightness", "35").toInt();
   next.brightness = constrain(next.brightness, 0, 255);
@@ -186,16 +211,26 @@ void loadConfiguration() {
   if (!SD.begin(5, SD_SCK_MHZ(12))) return;
   if (!SD.exists("/config.xml") && SD.exists("/config.menu.bak")) SD.rename("/config.menu.bak", "/config.xml");
   FsFile file = SD.open("/config.xml");
-  if (!file || file.size() > 65536) { if (file) file.close(); return; }
-  configXML = ""; configXML.reserve(file.size() + 1);
-  while (file.available()) configXML += (char)file.read();
+  if (!indexConfigFile(file,configIndex)) {if(file)file.close();return;}
   file.close();
-  for (unsigned i = 0; i < MAX_PROFILES; ++i) {
-    if (!readProfile(i, profile)) break;
-    memcpy(profileNames[i], profile.name, 32); ++profileCount;
+  globalSettings=readConfigSpan(configIndex.settings);
+  for(unsigned i=0;i<configIndex.count;++i) {
+    // Read only the opening tag, never each full profile during startup.
+    FsFile nameFile=SD.open("/config.xml",O_RDONLY);
+    if(!nameFile || !nameFile.seekSet(configIndex.profiles[i].begin))return;
+    char tag[512]={};unsigned length=0;char quote=0;bool complete=false;
+    while(length+1<sizeof(tag)){
+      int c=nameFile.read();if(c<0)break;tag[length++]=char(c);
+      if(quote){if(c==quote)quote=0;}else if(c=='\"'||c=='\'')quote=char(c);else if(c=='>'){complete=true;break;}
+    }
+    String opening=tag;int name=opening.indexOf("name=\"");
+    int end=name<0?-1:opening.indexOf('\"',name+6);
+    if(!complete || name<0 || end<0)return;
+    copyText(profileNames[i],xmlDecode(opening.substring(name+6,end)));
+    ++profileCount;
   }
-  if (!profileCount) return;
-  String settings = textTag(configXML, "Settings");
+  if(!profileCount)return;
+  const String &settings=globalSettings;
   Clicky_P = textTag(settings, "Clicky_P", "0.5").toFloat();
   Clicky_I = textTag(settings, "Clicky_I", "0").toFloat();
   Twist_P = textTag(settings, "Twist_P", "0.65").toFloat();

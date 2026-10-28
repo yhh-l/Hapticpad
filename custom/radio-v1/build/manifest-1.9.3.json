@@ -3,10 +3,12 @@
   "sha256": "023309436b7cf6ada9ca8c182618e4a1a0d1dfbda794d187ac7737befe729a59",
   "flash_bytes": 371932,
   "ram_bytes": 41176,
-  "device_programmed": false,
+  "device_programmed": true,
   "sd_written": false,
-  "physical_tested": false,
   "change": "Screen labels follow physical key 7=GP14 confirm/save, 8=GP13 cancel; logical GPIO/bindings unchanged",
-  "mac_communication_root_cause": "Unconfirmed: device not enumerated on current Mac",
-  "tests": "Production button dispatcher including Cmd+C after chooser cancel/confirm; HUD, numeric macro and numeric parser passed"
+  "mac_communication_root_cause": "USB enumeration restored after user changed the data cable; Mac HID and SD reported ready",
+  "tests": "Production button dispatcher including Cmd+C after chooser cancel/confirm; HUD, numeric macro and numeric parser passed",
+  "device_programmed_date": "2026-10-28",
+  "flash_readback_verified": true,
+  "user_test_record": "用户明确表示历次固件均有实测；按键、滚动、力反馈、菜单、LED的逐项历史反馈见VALIDATION-1.10.0.md。本字段不冒充新版本专项测试。"
 }

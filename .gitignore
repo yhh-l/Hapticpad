@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.DS_Store
+custom/sd-toolbox/backups/
+custom/sd-toolbox/release/custom-upload.uf2

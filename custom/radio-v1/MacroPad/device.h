@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <memory>
+#include "sd_config_index.h"
 #include "chords.h"
 #include "settings_menu.h"
 #include "haptics.h"
@@ -10,9 +11,9 @@
 #include "pixel_pet.h"
 #include "idle_timer.h"
 
-constexpr unsigned MAX_PROFILES = 32;
+constexpr unsigned MAX_PROFILES = SD_MAX_PROFILES;
 constexpr uint32_t SD_BOOT_MAGIC = 0x4850434E;
-constexpr const char *FW_VERSION = "V1-CN-1.9.3-RADIO";
+constexpr const char *FW_VERSION = "V1-CN-1.10.0-SD";
 struct ChordBinding {
   uint8_t mask = 0;
   char numberText[16] = {};

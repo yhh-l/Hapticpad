@@ -1,69 +1,41 @@
-# Hapticpad V1-CN-1.9.3-RADIO
+# Hapticpad V1-CN-1.10.0-SD
 
-本版本修复配置选择与确认流程，保留 1.9.1 的 Win/Mac 数字组合键支持。
+SD索引按需读取版：旧配置格式兼容，配置总量从64KiB扩至8MiB，方案数从32扩至256；单套保留64KiB解析边界。RAM不再保存整个XML，切换才读取目标方案。每套支持多种组合键，包括已有数字输出宏；快捷键、引脚、力反馈和稳定PIO灯效保持原逻辑。
 
-## 适用硬件
+网页工具箱与启动说明见 [SD工具箱](../sd-toolbox/README.md)，构建/设备/用户验收记录见 [验证记录](VALIDATION-1.10.0.md)。
 
-- RP2040 Plus 16 MB，Hapticpad V1 接线。
-- 固件使用 TinyUSB；请先确认硬件与接线相符。
+## 设备菜单
 
-## 本机实体键位与菜单
+当前实体7=GP14、实体8=GP13；内部绑定位序兼容旧SD。
+长8选择配置、旋钮浏览、短7确认/短8取消。长7进入设置，短7确认、短8返回；长7保存退出、长8放弃退出。
 
-本版按已确认的实物编号显示提示：实体7接GP14、实体8接GP13。
-内部绑定序号及SD数据保持兼容，只修改屏幕提示和说明，没有交换GPIO或快捷键绑定。
+## 实现
 
-1. 长按实体8约0.7秒，出现列表后松开。
-2. 旋钮选择配置。
-3. 短按并松开实体7，应用并退出；实体8取消。
+- `sd_config_index.h`：流式检查XML、记录文件偏移，最多256项，索引约2KiB，名称约8KiB。
+- `config.ino`：启动只扫描与读名称，读当前Profile；失败不替换正在运行的参数。
+- `menu.ino`：2KiB分块复制并逐字节读回核对，保存单段，其他方案原字节保留，备份/失败回滚。
+- 第二核心使用独立8KiB栈，避免默认2KiB栈容不下SD校验调用链。
+- `HP INFO`：新增存储方式、总字节、方案数、当前方案字节、空闲堆及存储栈余量。
+- `HP PROFILE n`：按零基索引切换；菜单或U盘模式拒绝操作。
 
-长按实体7进入设置。设置中短7确认字段、短8返回；长7保存并退出，长8放弃并退出。
-切换失败保留列表并提示“切换失败 7重试”。
+当前参数常驻一套；切换/编辑期间临时保留待校验参数及当前目标XML，成功后释放。这些临时空间仍受单套64KiB边界限制。
 
-## Mac普通快捷键/滚动不响应时
+## 构建
 
-Mac中刻度、轻刻度等手感档位共用USB HID输出，不需要电台驱动或CAT控制台。
-但每个档位各自保存快捷键、滚动修饰键与方向，手感名称并不能保证绑定完全相同。
+Arduino-Pico6.3.1，SimpleFOC2.3.5、U8g22.35.30、NeoPixel1.15.5、FastLED3.9.15。
 
-1. 先退出配置选择/设置；菜单内会暂停发送普通按键和滚动。
-2. 查看Mac是否识别到Hapticpad键盘/鼠标，使用数据线连接；未枚举USB设备时先排查连接。
-3. 打开工具箱输入检测区，先单独按实体6（退格），再转旋钮，分别检查按键与滚动。
-4. 若退格/滚动正常而复制不正常，检查当前Mac配置是否使用Cmd（VK91）而非Ctrl/Win预设；复制需在有选中文字的应用中验证。
-5. 若退格正常、旋钮不动，再核对当前配置WheelMode、WheelKey及编码器状态。
-6. HP INFO为只读状态命令：version、sd、disk_mode、settings_open、menu_kind、keyboard_ready、mouse_ready、last_binding_mask用于区分连接、菜单与输出路径。
-
-固件串口HP HUD只更新电台看板，不参与普通Mac按键/滚动。
-本次本机未发现设备串口，现场故障原因尚未确认；未刷固件、未改SD。
-
-## Win/Mac 数字组合键
-
-固件支持同时按 4+5+6 输出 813816 后发送一次 Enter。长按只触发一次，松开后可以再次触发。需要 SD 卡 config.xml 中对应的 NumberText/EnterAfterText 组合键配置；仅更新 UF2 不会自动添加这些配置。
-
-源码包附带 tools/Add-Number456.py，可为名称以 Win 或 Mac 开头的配置生成此组合键，输出到单独文件：
-
-```text
-python tools/Add-Number456.py config.xml config-number456.xml
+```sh
+arduino-cli compile --fqbn 'rp2040:rp2040:waveshare_rp2040_plus:flash=16777216_0,usbstack=tinyusb' --output-dir build custom/radio-v1/MacroPad
 ```
 
-先备份 SD 卡原 config.xml，检查生成结果后再替换。此脚本会设置 4+5+6 对应的组合键；其他按键配置保持原有内容。
+适用RP2040 Plus16MB、当前V1接线；USB使用TinyUSB。详细CI见仓库工作流。
 
-## 刷入
+## 数字组合宏
 
-下载 Hapticpad_V1_CN_1.9.3_RADIO.uf2。让对应设备进入 BOOTSEL，出现 RPI-RP2 磁盘后复制 UF2。设备会重启；可用 115200 波特串口发送 HP INFO，核对 version 为 V1-CN-1.9.3-RADIO。
+保留1.9.1起NumberText/EnterAfterText支持。4+5+6输出813816并回车需要SD对应配置，刷UF2不自动添加或覆盖配置。tools/Add-Number456.py可生成单独配置文件。
 
-## 验证范围
+## 历史测试说明
 
-本版在1.9.2基础上调整实体键位提示，保留原菜单调度、HUD和数字宏。
-本地构建/回归结果见build/manifest-1.9.3.json；设备与Windows现场通讯待验收。
-没有沿用1.9.2的实机测试作为本版验收结果。
+用户在此前迭代已反馈：Backspace触发正常、旋钮有滚动记录、力反馈阻力明显、LED静置/旋转/切配置稳定、跟随方向正确、随机颜色拖尾正常。后续还确认配置选择使用实体7确认。2026-10-28本机1.9.3也完成刷写与回读校验并读取到USB HID及SD状态；早期README“本机未发现设备、未刷固件”的描述仅对应当时排查阶段，不能代表后来已完成的测试。
 
-## 源码与构建
-
-源码位于仓库分支 codex/physical-key-labels 的 custom/radio-v1/MacroPad。
-
-构建基于 Arduino-Pico 6.3.1，FQBN：
-
-```text
-rp2040:rp2040:waveshare_rp2040_plus:flash=16777216_0,usbstack=tinyusb
-```
-
-依赖版本及完整流程见.github/workflows/build-radio.yml；源码包附build-radio.yml。原项目许可证见 LICENSE。
+这些历史记录不代替1.10.0新增SD加载/保存行为的专项验证，具体见本版验证记录。

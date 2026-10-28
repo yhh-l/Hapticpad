@@ -24,60 +24,105 @@ void confirmMenuField() {
   }
   settingsMenu.confirm();
 }
-void replaceSetting(String &block, const char *name, const String &value) {
+bool replaceSetting(String &block, const char *name, const String &value) {
   String start=String("<")+name+">", end=String("</")+name+">";
+  if(start.length()!=strlen(name)+2 || end.length()!=strlen(name)+3)return false;
   int a=block.indexOf(start), b=a<0?-1:block.indexOf(end,a+start.length());
-  if (a>=0 && b>=a) block=block.substring(0,a+start.length())+value+block.substring(b);
+  unsigned position=0,remove=0;String insertion;
+  if(a>=0 && b>=a){position=a+start.length();remove=b-position;insertion=value;if(insertion.length()!=value.length())return false;}
   else {
-    int close=block.indexOf("</Profile>");
-    if(close>=0)block=block.substring(0,close)+start+value+end+block.substring(close);
+    int close=block.indexOf("</Profile>");if(close<0)return false;
+    position=close;insertion=start+value+end;
+    if(insertion.length()!=start.length()+value.length()+end.length())return false;
   }
+  unsigned expected=block.length()-remove+insertion.length();
+  if(expected>SD_MAX_PROFILE_BYTES){return false;}
+  // Update in place: total free heap does not guarantee another contiguous
+  // 64KiB block. Reserve before mutation so failure preserves the input.
+  unsigned oldLength=block.length();
+  if(!block.reserve(expected)){return false;}
+  if(expected>oldLength && !block.concat(insertion.c_str(),expected-oldLength))return false;
+  char *data=block.begin();
+  memmove(data+position+insertion.length(),data+position+remove,oldLength-position-remove);
+  memcpy(data+position,insertion.c_str(),insertion.length());
+  if(expected<oldLength)block.remove(expected);
+  return block.length()==expected;
 }
-bool persistSettingsXML(const String &candidate) {
-  if (!candidate.length() || candidate.length()>65536) return false;
-  const char *temp="/config.menu.tmp", *backup="/config.menu.bak";
-  FsFile file=SD.open(temp,O_WRONLY|O_CREAT|O_TRUNC);
-  if (!file) return false;
-  bool written=file.write((const uint8_t*)candidate.c_str(),candidate.length())==candidate.length();
-  written=file.sync() && written; file.close();
-  if (!written) {SD.remove(temp);return false;}
-  file=SD.open(temp,O_RDONLY);
-  if (!file || file.size()!=candidate.length()) {if(file)file.close();SD.remove(temp);return false;}
-  uint8_t buffer[128]; unsigned position=0;
-  while(position<candidate.length()) {
-    unsigned count=min(128u,unsigned(candidate.length()-position));
-    if(file.read(buffer,count)!=(int)count || memcmp(buffer,candidate.c_str()+position,count)) {
-      file.close();SD.remove(temp);return false;
-    }
-    position+=count;
+bool copyConfigBytes(FsFile &source,FsFile &target,uint32_t begin,uint32_t count) {
+  if(!source.seekSet(begin))return false;
+  uint8_t buffer[2048];
+  observeStorageStack();
+  while(count){
+    unsigned n=min(count,uint32_t(sizeof(buffer)));
+    if(source.read(buffer,n)!=(int)n || target.write(buffer,n)!=n)return false;
+    count-=n;
   }
+  return true;
+}
+bool compareConfigBytes(FsFile &a,FsFile &b,uint32_t first,uint32_t second,uint32_t count) {
+  if(!a.seekSet(first)||!b.seekSet(second))return false;
+  uint8_t left[1024],right[1024];
+  observeStorageStack();
+  while(count){unsigned n=min(count,uint32_t(sizeof(left)));if(a.read(left,n)!=(int)n||b.read(right,n)!=(int)n||memcmp(left,right,n))return false;count-=n;}
+  return true;
+}
+bool persistProfileXML(unsigned index,const String &replacement) {
+  if(index>=configIndex.count || !replacement.length() || replacement.length()>SD_MAX_PROFILE_BYTES)return false;
+  ConfigSpan span=configIndex.profiles[index];
+  uint32_t expected=configIndex.bytes-span.size()+replacement.length();
+  if(expected>SD_MAX_CONFIG_BYTES)return false;
+  const char *temp="/config.menu.tmp",*backup="/config.menu.bak";
+  FsFile original=SD.open("/config.xml",O_RDONLY);
+  FsFile file=SD.open(temp,O_WRONLY|O_CREAT|O_TRUNC);
+  if(!original || !file || original.size()!=configIndex.bytes)return false;
+  bool written=copyConfigBytes(original,file,0,span.begin) &&
+    file.write((const uint8_t*)replacement.c_str(),replacement.length())==replacement.length() &&
+    copyConfigBytes(original,file,span.end,configIndex.bytes-span.end);
+  written=file.sync() && written;file.close();
+  if(!written){original.close();SD.remove(temp);return false;}
+#if defined(ARDUINO_ARCH_RP2040)
+  message("正在核对配置", "请稍候 勿断电");
+#endif
+  file=SD.open(temp,O_RDONLY);
+  bool same=file && file.size()==expected && compareConfigBytes(original,file,0,0,span.begin);
+  uint8_t buffer[128];unsigned position=0;
+  while(same && position<replacement.length()){
+    unsigned n=min(128u,unsigned(replacement.length()-position));
+    same=file.read(buffer,n)==(int)n && !memcmp(buffer,replacement.c_str()+position,n);position+=n;
+  }
+  same=same && compareConfigBytes(original,file,span.end,span.begin+replacement.length(),configIndex.bytes-span.end);
+  original.close();
+  std::unique_ptr<ConfigIndex> candidate(new(std::nothrow) ConfigIndex);
+  same=same && candidate && indexConfigFile(file,*candidate) && candidate->count==configIndex.count;
   file.close();
-  // Keep the old complete file until the new complete file is verified.
-  if(SD.exists(backup) && !SD.remove(backup))return false;
-  if(!SD.rename("/config.xml",backup))return false;
+  if(!same){SD.remove(temp);return false;}
+  if(SD.exists(backup) && !SD.remove(backup)){return false;}
+  if(!SD.rename("/config.xml",backup)){return false;}
   if(!SD.rename(temp,"/config.xml")){SD.rename(backup,"/config.xml");return false;}
+  configIndex=*candidate;
   return true;
 }
 bool saveMenuSettings() {
   if (settingsMenu.editing && settingsMenu.item==0) {confirmMenuField();if(settingsMenu.error)return false;}
   const MenuValues &value=settingsMenu.values;
+#if defined(ARDUINO_ARCH_RP2040)
+  message("正在保存配置", "请稍候 勿断电");
+#endif
+  { // Release the editing XML before commitProfile allocates the parser input.
   String block=profileBlock(value.profile);
   if(!block.length())return false;
-  replaceSetting(block,"HapticStrength",String(value.strength));
-  replaceSetting(block,"HapticDamping",String(value.damping));
-  replaceSetting(block,"LED_Brightness",String(value.brightness));
+  if(!replaceSetting(block,"HapticStrength",String(value.strength)))return false;
+  if(!replaceSetting(block,"HapticDamping",String(value.damping)))return false;
+  if(!replaceSetting(block,"LED_Brightness",String(value.brightness)))return false;
   const char *ledNames[]={"Halo","Breath","Bands","Rainbow","Solid","Off","Knob","KnobTrail"};
-  replaceSetting(block,"LED_Mode",ledNames[value.led]);
+  if(!replaceSetting(block,"LED_Mode",ledNames[value.led]))return false;
   // Passive damping/assist profiles require Clicky, as in the web editor.
   String wheel=textTag(block,"HapticMode","Follow")=="Follow" ?
     value.wheel==1?"Twist":value.wheel==2?"Momentum":value.wheel==3?"Flywheel":"Clicky" : "Clicky";
-  replaceSetting(block,"WheelMode",wheel);
-  String before=profileBlock(value.profile);
-  int position=configXML.indexOf(before);
-  if(position<0)return false;
-  String candidate=configXML.substring(0,position)+block+configXML.substring(position+before.length());
-  if(!persistSettingsXML(candidate))return false;
-  configXML=candidate; return commitProfile(value.profile);
+  if(!replaceSetting(block,"WheelMode",wheel))return false;
+  if(!persistProfileXML(value.profile,block))return false;
+  }
+  return commitProfile(value.profile);
 }
 String menuValueText() {
   const MenuValues &value=settingsMenu.values;

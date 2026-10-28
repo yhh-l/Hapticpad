@@ -14,6 +14,11 @@
 #include "number_macro.h"
 #include "neopixel_transport.h"
 
+// SD validation and FAT calls nest beyond the SDK's default core1 stack.
+// Arduino-Pico allocates a separate 8KiB stack before starting setup1.
+bool core1_separate_stack = true;
+extern int minimumStorageStackFree;
+extern ConfigIndex configIndex;
 extern uint32_t screenFrameMs, petQuoteId, petQuoteCount;
 SdFat SD;
 U8G2_SSD1309_128X64_NONAME0_F_4W_SW_SPI u8g2(U8G2_R0, 28, 22, 6, 7, 8);
@@ -355,9 +360,19 @@ void serialCommand() {
       Serial.println(radioHUD.update(buffer+7, profile.name, millis()) ? "HP OK HUD" : "HP ERROR HUD");
     } else if (!strcmp(buffer, "HP HUDOFF")) {
       radioHUD.clear(); Serial.println("HP OK HUDOFF");
+    } else if (!strncmp(buffer,"HP PROFILE ",11)) {
+      const char *number=buffer+11;char *end=nullptr;long index=strtol(number,&end,10);
+      if(!*number || *number<'0' || *number>'9' || *end || index<0 || index>=profileCount || diskMode.load() || menuOpen.load())Serial.println("HP ERROR PROFILE");
+      else Serial.println(commitProfile(index)?"HP OK PROFILE":"HP ERROR PROFILE");
     } else if (!strcmp(buffer, "HP INFO")) {
       Serial.print("HP INFO {\"version\":\""); Serial.print(FW_VERSION);
       Serial.print("\",\"profile\":"); printJSONString(profile.name);
+      Serial.print(",\"config_storage\":\"sd-indexed\",\"profile_count\":");Serial.print(profileCount);
+      Serial.print(",\"config_bytes\":");Serial.print(configIndex.bytes);
+      Serial.print(",\"active_profile\":");Serial.print(activeProfile);
+      Serial.print(",\"active_profile_bytes\":");Serial.print(activeProfile>=0 && unsigned(activeProfile)<configIndex.count?configIndex.profiles[activeProfile].size():0);
+      Serial.print(",\"free_heap\":");Serial.print(rp2040.getFreeHeap());
+      Serial.print(",\"storage_stack_min_free\":");Serial.print(minimumStorageStackFree);
       Serial.print(",\"sd\":"); Serial.print(sdDetected ? "true" : "false");
       Serial.print(",\"disk_mode\":"); Serial.print(diskMode.load() ? "true" : "false");
       Serial.print(",\"usb_mounted\":"); Serial.print(TinyUSBDevice.mounted() ? "true" : "false");
