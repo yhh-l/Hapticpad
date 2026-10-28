@@ -1,0 +1,12 @@
+{
+  "version": "V1-CN-1.9.3-RADIO",
+  "sha256": "023309436b7cf6ada9ca8c182618e4a1a0d1dfbda794d187ac7737befe729a59",
+  "flash_bytes": 371932,
+  "ram_bytes": 41176,
+  "device_programmed": false,
+  "sd_written": false,
+  "physical_tested": false,
+  "change": "Screen labels follow physical key 7=GP14 confirm/save, 8=GP13 cancel; logical GPIO/bindings unchanged",
+  "mac_communication_root_cause": "Unconfirmed: device not enumerated on current Mac",
+  "tests": "Production button dispatcher including Cmd+C after chooser cancel/confirm; HUD, numeric macro and numeric parser passed"
+}

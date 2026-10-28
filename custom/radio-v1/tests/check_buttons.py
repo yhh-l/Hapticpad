@@ -86,6 +86,12 @@ int main(){
  ackOK=true;drive(128,100);drive(0,100);assert(!menuOpen&&activeProfile==7);
  // Entry release and cancellation cannot advance or apply a profile.
  drive(64,800);drive(0,100);turnMenu(-3);drive(64,100);drive(0,100);assert(!menuOpen&&activeProfile==7);expect({});
+ // Mac shortcut reports must resume after cancelling or confirming the chooser.
+ prepare(0);profile.actions[0][0]=91;profile.actions[0][1]=67;profile.actions[0][2]=0;
+ drive(64,800);drive(0,100);drive(64,100);drive(0,100);assert(!menuOpen);
+ usb_keyboard.modifiers.clear();drive(1,60);drive(0,120);expect({67});assert(usb_keyboard.modifiers.back()==8);
+ drive(64,800);drive(0,100);turnMenu(1);drive(128,100);drive(0,100);assert(!menuOpen);
+ usb_keyboard.modifiers.clear();drive(1,60);drive(0,120);expect({67});assert(usb_keyboard.modifiers.back()==8);
  prepare(1);drive(64,180);drive(0,100);expect({71});
  drive(192,200);assert(!menuOpen);drive(0,120);expect({114});
  drive(192,1000);assert(menuOpen);expect({});drive(0,100);drive(64,800);drive(0,100);assert(!menuOpen);

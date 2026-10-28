@@ -93,7 +93,7 @@ String menuValueText() {
 void drawSettings() {
   if(menuKind==1){
     u8g2.setFont(u8g2_font_wqy12_t_gb2312);
-    u8g2.drawUTF8(0,12,settingsMenu.error?"切换失败 8重试":"选配置 7返回 8确认");
+    u8g2.drawUTF8(0,12,settingsMenu.error?"切换失败 7重试":"选配置 8返回 7确认");
     for(int row=-1;row<=1;++row){
       int index=menuSelection+row,y=39+row*14;
       if(index<0 || index>=profileCount)continue;
@@ -108,7 +108,7 @@ void drawSettings() {
   else u8g2.drawUTF8(0,12,settingsMenu.editing?names[settingsMenu.item]:"设置 旋转或按数字");
   if(settingsMenu.editing){
     clipped(2,34,menuValueText().c_str(),124);
-    u8g2.drawUTF8(0,48,"7返回 8确认");
+    u8g2.drawUTF8(0,48,"8返回 7确认");
   } else {
     int first=constrain(settingsMenu.item-1,0,3);
     for(int row=0;row<3;++row){
@@ -117,5 +117,5 @@ void drawSettings() {
       clipped(2,y,names[item],124);u8g2.setDrawColor(1);
     }
   }
-  u8g2.drawUTF8(0,64,"长7放弃 长8保存");
+  u8g2.drawUTF8(0,64,"长8放弃 长7保存");
 }

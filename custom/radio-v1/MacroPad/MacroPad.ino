@@ -22,6 +22,8 @@ BLDCDriver6PWM driver(20, 21, 18, 19, 16, 17);
 Encoder encoder(27, 26, 1024);
 void doA() { encoder.handleA(); }
 void doB() { encoder.handleB(); }
+// Physical labels on this enclosure: 7 = GP14, 8 = GP13.
+// Internal binding indices remain unchanged for SD compatibility.
 constexpr uint8_t buttonPins[8] = {9, 1, 0, 12, 11, 10, 13, 14};
 constexpr int NUM_LEDS = 20, DATA_PIN = 15;
 CRGB leds[NUM_LEDS];
