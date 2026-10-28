@@ -113,6 +113,8 @@ class ConfigTests(unittest.TestCase):
         self.assertFalse(loaded['motor_enabled'])
         self.assertEqual(loaded['profiles'][0]['feedback'],model.FEEDBACK_DEFAULTS)
 
+# These tests simulate macOS ioreg/diskutil even when CI runs on Linux.
+@patch.object(bridge.sys, "platform", "darwin")
 class DeviceTests(unittest.TestCase):
     def test_usb_reenumeration_retries_transient_registry_error(self):
         with patch.object(bridge,'run',side_effect=[RuntimeError("ioreg: error: can't obtain child."),plistlib.dumps([])]),patch.object(bridge.time,'sleep'):
