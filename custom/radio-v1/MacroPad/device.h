@@ -12,9 +12,11 @@
 
 constexpr unsigned MAX_PROFILES = 32;
 constexpr uint32_t SD_BOOT_MAGIC = 0x4850434E;
-constexpr const char *FW_VERSION = "V1-CN-1.9-RADIO";
+constexpr const char *FW_VERSION = "V1-CN-1.9.1-RADIO";
 struct ChordBinding {
   uint8_t mask = 0;
+  char numberText[16] = {};
+  bool enterAfterText = false;
   char label[32] = {};
   uint8_t actions[3] = {};
   uint16_t delays[3] = {};

@@ -11,6 +11,7 @@
 #include <pico/bootrom.h>
 #include "device.h"
 #include "radio_hud.h"
+#include "number_macro.h"
 #include "neopixel_transport.h"
 
 extern uint32_t screenFrameMs, petQuoteId, petQuoteCount;
@@ -67,6 +68,7 @@ void setDeviceStandby(bool asleep) {
 }
 
 bool macroActive = false, macroRelease = false;
+NumberMacro numberMacro;
 int macroStage = 0;
 uint8_t macroActions[3] = {};
 uint16_t macroDelays[3] = {};
@@ -158,6 +160,7 @@ void setup1() {
 void releaseKeys() {
   if (usb_keyboard.ready()) usb_keyboard.keyboardRelease(0);
   macroActive = macroRelease = false;
+  numberMacro.cancel();
   macroModifier = 0;
 }
 
@@ -169,6 +172,13 @@ void beginMacro(const uint8_t *codes, const uint16_t *delays, const char *label,
   macroRelease = false; macroActive = true;
   macroDue = millis() + macroDelays[0];
   lastBindingMask = mask; copyText(lastBindingLabel, String(label)); lastBindingAt = millis();
+}
+void beginNumberMacro(const ChordBinding &binding) {
+  if (macroActive || !usb_keyboard.ready()) return;
+  if(!numberMacro.begin(binding.numberText,binding.enterAfterText,millis()))return;
+  macroActive=true; macroRelease=false; macroModifier=0;
+  macroDue=millis();
+  lastBindingMask=binding.mask; copyText(lastBindingLabel,String(binding.label));lastBindingAt=millis();
 }
 void startMacro(int index) {
   beginMacro(profile.actions[index], profile.delays[index], profile.labels[index], 1u << index);
@@ -182,11 +192,22 @@ void startChord(uint8_t mask) {
   for (unsigned i = 0; i < profile.chordCount; ++i) {
     const ChordBinding &binding = profile.chords[i];
     if (binding.mask == mask) {
-      beginMacro(binding.actions, binding.delays, binding.label, mask); return;
+      if(binding.numberText[0])beginNumberMacro(binding);
+      else beginMacro(binding.actions, binding.delays, binding.label, mask);
+      return;
     }
   }
 }
 void tickMacro() {
+  if (macroActive && numberMacro.active()) {
+    if(!usb_keyboard.ready())return;
+    uint8_t vk=0;
+    int event=numberMacro.tick(millis(),vk);
+    if(event==1){uint8_t keys[6]={(uint8_t)convertKeycode(vk),0,0,0,0,0};usb_keyboard.keyboardReport(0,0,keys);}
+    else if(event==2)usb_keyboard.keyboardRelease(0);
+    if(!numberMacro.active()){macroActive=false;macroRelease=false;macroModifier=0;}
+    return;
+  }
   if (!macroActive || (int32_t)(millis() - macroDue) < 0 || !usb_keyboard.ready()) return;
   if (macroRelease || macroStage >= 3) { releaseKeys(); return; }
   while (macroStage < 3) {

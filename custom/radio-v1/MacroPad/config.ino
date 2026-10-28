@@ -162,6 +162,15 @@ bool readProfile(int index, Profile &output) {
     binding.mask = mask;
     copyText(binding.label, xmlDecode(textTag(item, "Label", "未设置")));
     if (!readActions(item, binding.actions, binding.delays)) return false;
+    String numberText = textTag(item, "NumberText");
+    if (item.indexOf("<NumberText>") >= 0) {
+      if (!numberText.length() || numberText.length() >= sizeof(binding.numberText)) return false;
+      for (unsigned n=0;n<numberText.length();++n) if(numberText[n]<'0' || numberText[n]>'9') return false;
+      memcpy(binding.numberText,numberText.c_str(),numberText.length()+1);
+      String enter = textTag(item,"EnterAfterText","0");
+      if (enter!="0" && enter!="1")return false;
+      binding.enterAfterText=enter=="1";
+    }
     cursor = end + 8;
   }
   output = next;

@@ -13,6 +13,8 @@ header=r'''
 #include <vector>
 #include <iostream>
 #include "device.h"
+#include "number_macro.h"
+NumberMacro numberMacro;
 using String=std::string;
 uint32_t now=0,pins=0,buttonsMask=0;
 uint32_t millis(){return now;}
@@ -34,8 +36,8 @@ bool sdDetected=true,macroActive=false,macroRelease=false;
 int macroStage=0;uint8_t macroActions[3]={},macroModifier=0,lastBindingMask=0;
 uint16_t macroDelays[3]={};uint32_t macroDue=0,lastBindingAt=0;char lastBindingLabel[32]={};
 ChordRecognizer chordRecognizer;
-struct FakeKeyboard{std::vector<int> keys;bool ready(){return true;}void keyboardReport(int,int,const uint8_t *key){if(key[0])keys.push_back(key[0]);}}usb_keyboard;
-void releaseKeys(){macroActive=false;macroRelease=false;macroModifier=0;}
+struct FakeKeyboard{std::vector<int> keys,modifiers;int releases=0;bool ready(){return true;}void keyboardRelease(int){++releases;}void keyboardReport(int,int modifier,const uint8_t *key){if(key[0]){keys.push_back(key[0]);modifiers.push_back(modifier);}}}usb_keyboard;
+void releaseKeys(){usb_keyboard.keyboardRelease(0);numberMacro.cancel();macroActive=false;macroRelease=false;macroModifier=0;}
 int checkModifiers(int code){return code==17?1:code==16?2:code==18?4:code==91?8:0;}
 int convertKeycode(int code){return code;}
 void commitProfile(int index){activeProfile=index;}
@@ -66,6 +68,12 @@ int main(){
  drive(192,200);assert(!menuOpen);drive(0,120);expect({114});
  drive(192,1000);assert(menuOpen);expect({});drive(0,100);drive(64,800);drive(0,100);assert(!menuOpen);
  prepare(2);drive(192,1000);assert(!menuOpen);drive(0,100);expect({114});
+ prepare(0);profile.chordCount=4;auto &text=profile.chords[3];text.mask=56;strcpy(text.numberText,"813816");text.enterAfterText=true;
+ usb_keyboard.modifiers.clear();int released=usb_keyboard.releases;
+ drive(56,1000);drive(0,150);expect({56,49,51,56,49,54,13});assert(usb_keyboard.releases-released==7);
+ for(int m:usb_keyboard.modifiers)assert(m==0);
+ drive(56,40);drive(0,500);expect({56,49,51,56,49,54,13});
+ drive(56,140);releaseKeys();drive(0,500);usb_keyboard.keys.clear();assert(!numberMacro.active()&&!macroActive);
  std::cout<<"PASS: production GPIO debounce, double/triple dispatch, no subset/held repeats, 7/8 navigation, settings isolation and long exit/save, custom pair versus all-custom\n";
 }
 '''
