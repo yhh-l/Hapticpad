@@ -7,7 +7,7 @@ MenuValues menuValues(int index, const Profile &source) {
   return values;
 }
 void enterProfileSelector() {
-  releaseKeys(); menuKind=1; menuSelection=activeProfile;
+  releaseKeys(); menuKind=1; menuSelection=activeProfile; settingsMenu.error=false;
   chordRecognizer.cancel(buttonsMask); wheelEvents.store(0);
   menuOpen.store(true); generation.fetch_add(1);
 }
@@ -77,8 +77,7 @@ bool saveMenuSettings() {
   if(position<0)return false;
   String candidate=configXML.substring(0,position)+block+configXML.substring(position+before.length());
   if(!persistSettingsXML(candidate))return false;
-  configXML=candidate; commitProfile(value.profile);
-  return activeProfile==value.profile;
+  configXML=candidate; return commitProfile(value.profile);
 }
 String menuValueText() {
   const MenuValues &value=settingsMenu.values;
@@ -94,7 +93,7 @@ String menuValueText() {
 void drawSettings() {
   if(menuKind==1){
     u8g2.setFont(u8g2_font_wqy12_t_gb2312);
-    u8g2.drawUTF8(0,12,"选择 7返回 8确认");
+    u8g2.drawUTF8(0,12,settingsMenu.error?"切换失败 8重试":"选配置 7返回 8确认");
     for(int row=-1;row<=1;++row){
       int index=menuSelection+row,y=39+row*14;
       if(index<0 || index>=profileCount)continue;

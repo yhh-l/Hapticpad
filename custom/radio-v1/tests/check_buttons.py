@@ -4,8 +4,10 @@ import subprocess
 import tempfile
 root=Path(__file__).resolve().parents[1]
 source=(root/'MacroPad/MacroPad.ino').read_text()
-macro=source[source.index('void beginMacro('):source.index('void commitProfile(')]
-buttons=source[source.index('void readButtons()'):source.index('void printJSONString(')]
+macro=source[source.index('void beginMacro('):source.index('bool commitProfile(')]
+buttons=source[source.index('bool commitProfile('):source.index('void printJSONString(')]
+menu=(root/'MacroPad/menu.ino').read_text()
+entries=menu[:menu.index('void confirmMenuField(')]
 header=r'''
 #include <cassert>
 #include <cstring>
@@ -40,9 +42,15 @@ struct FakeKeyboard{std::vector<int> keys,modifiers;int releases=0;bool ready(){
 void releaseKeys(){usb_keyboard.keyboardRelease(0);numberMacro.cancel();macroActive=false;macroRelease=false;macroModifier=0;}
 int checkModifiers(int code){return code==17?1:code==16?2:code==18?4:code==91?8:0;}
 int convertKeycode(int code){return code;}
-void commitProfile(int index){activeProfile=index;}
-void enterProfileSelector(){menuKind=1;menuSelection=activeProfile;releaseKeys();menuOpen=true;chordRecognizer.cancel(buttonsMask);++enters;}
-void enterSettings(){menuKind=2;releaseKeys();settingsMenu.begin(MenuValues{});menuOpen=true;chordRecognizer.cancel(buttonsMask);++enters;}
+std::atomic<bool> configBusy{false},configAcknowledged{false};
+bool parseOK=true,ackOK=true;
+void delay(int ms){now+=ms;if(ackOK)configAcknowledged=true;}
+bool readProfile(int index,Profile &out){out=profile;out.name[0]='A'+index;return parseOK;}
+void setLEDProfile(){}
+struct FakeHUD{void clear(){}}radioHUD;
+constexpr int O_WRONLY=1,O_CREAT=2,O_TRUNC=4;
+struct FsFile{explicit operator bool()const{return true;}void print(int){}void close(){}};
+struct FakeSD{FsFile open(const char*,int){return {};}}SD;
 void confirmMenuField(){settingsMenu.confirm();}
 bool saveMenuSettings(){++saves;return true;}
 '''
@@ -57,13 +65,27 @@ int main(){
  drive(1,400);drive(0,120);expect({65});
  drive(64,100);drive(0,120);assert(activeProfile==1&&!menuOpen);expect({});
  drive(128,100);drive(0,120);assert(activeProfile==0&&!menuOpen);expect({});
- drive(128,800);assert(menuOpen&&menuKind==1);drive(0,120);assert(menuOpen);
+ drive(64,800);assert(menuOpen&&menuKind==1);drive(0,120);assert(menuOpen);
  drive(2,100);drive(0,100);assert(menuSelection==1);drive(128,100);drive(0,100);assert(!menuOpen&&activeProfile==1);expect({});
- drive(64,800);assert(menuOpen&&menuKind==2);drive(0,120);assert(menuOpen);
+ drive(128,800);assert(menuOpen&&menuKind==2);drive(0,120);assert(menuOpen);
  drive(1,100);drive(0,100);assert(menuOpen&&settingsMenu.item==0&&settingsMenu.editing);expect({});
  drive(128,100);drive(0,100);assert(menuOpen&&!settingsMenu.editing);
  drive(64,800);assert(!menuOpen);drive(0,100);assert(activeProfile==1);expect({});
- drive(64,800);drive(0,100);assert(menuOpen&&menuKind==2);drive(128,800);assert(!menuOpen&&saves==1);drive(0,100);assert(activeProfile==1);
+ drive(128,800);drive(0,100);assert(menuOpen&&menuKind==2);drive(128,800);assert(!menuOpen&&saves==1);drive(0,100);assert(activeProfile==1);
+ // Exact reported flow, including release after long7 and a held confirm key.
+ prepare(0);drive(64,800);assert(menuOpen&&menuKind==1);drive(0,80);
+ turnMenu(4);assert(menuSelection==4);drive(128,100);assert(menuOpen&&activeProfile==0);
+ drive(0,100);assert(!menuOpen&&activeProfile==4&&profile.name[0]=='E');expect({});
+ // Parse failure preserves running profile and selection; short8 retries.
+ drive(64,800);drive(0,100);turnMenu(2);parseOK=false;
+ drive(128,100);drive(0,100);assert(menuOpen&&settingsMenu.error&&activeProfile==4&&profile.name[0]=='E');
+ parseOK=true;drive(128,100);drive(0,100);assert(!menuOpen&&activeProfile==6&&!settingsMenu.error);
+ // Motor handshake timeout also keeps chooser open; successful retry exits.
+ drive(64,800);drive(0,100);turnMenu(1);ackOK=false;
+ drive(128,100);drive(0,100);assert(menuOpen&&settingsMenu.error&&activeProfile==6&&!configBusy);
+ ackOK=true;drive(128,100);drive(0,100);assert(!menuOpen&&activeProfile==7);
+ // Entry release and cancellation cannot advance or apply a profile.
+ drive(64,800);drive(0,100);turnMenu(-3);drive(64,100);drive(0,100);assert(!menuOpen&&activeProfile==7);expect({});
  prepare(1);drive(64,180);drive(0,100);expect({71});
  drive(192,200);assert(!menuOpen);drive(0,120);expect({114});
  drive(192,1000);assert(menuOpen);expect({});drive(0,100);drive(64,800);drive(0,100);assert(!menuOpen);
@@ -78,6 +100,6 @@ int main(){
 }
 '''
 with tempfile.TemporaryDirectory(prefix='haptic-buttons-') as temp:
-    folder=Path(temp);(folder/'check.cpp').write_text(header+macro+buttons+main)
+    folder=Path(temp);(folder/'check.cpp').write_text(header+macro+entries+buttons+main)
     subprocess.run(['g++','-std=c++17','-Wall','-Wextra','-Werror','-I',str(root/'MacroPad'),str(folder/'check.cpp'),'-o',str(folder/'check')],check=True)
     subprocess.run([str(folder/'check')],check=True)

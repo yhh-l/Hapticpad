@@ -224,23 +224,34 @@ void tickMacro() {
   }
 }
 
-void commitProfile(int index) {
-  if (index < 0 || index >= profileCount) return;
+bool commitProfile(int index) {
+  if (index < 0 || index >= profileCount) return false;
+  // Parse separately: invalid input must not overwrite the running profile.
+  std::unique_ptr<Profile> selected(new (std::nothrow) Profile);
+  if (!selected || !readProfile(index, *selected)) return false;
   configAcknowledged.store(false); configBusy.store(true);
   uint32_t start = millis();
   while (!configAcknowledged.load() && millis() - start < 1000) delay(1);
-  if (!configAcknowledged.load()) { configBusy.store(false); return; }
+  if (!configAcknowledged.load()) { configBusy.store(false); return false; }
   releaseKeys();
-  if (readProfile(index, profile)) {
-    activeProfile = index;
-    radioHUD.clear();
-    chordRecognizer.cancel(buttonsMask); lastBindingMask = 0;
-    setLEDProfile();
-    FsFile last = SD.open("/last.txt", O_WRONLY | O_CREAT | O_TRUNC);
-    if (last) { last.print(index); last.close(); }
-    generation.fetch_add(1); wheelEvents.store(0);
-  }
+  profile = *selected;
+  activeProfile = index;
+  radioHUD.clear();
+  chordRecognizer.cancel(buttonsMask); lastBindingMask = 0;
+  setLEDProfile();
+  FsFile last = SD.open("/last.txt", O_WRONLY | O_CREAT | O_TRUNC);
+  if (last) { last.print(index); last.close(); }
+  generation.fetch_add(1); wheelEvents.store(0);
   configBusy.store(false);
+  return true;
+}
+
+void turnMenu(int steps) {
+  if (!steps) return;
+  if (menuKind==1) {
+    menuSelection=constrain(menuSelection+steps,0,max(0,profileCount-1));
+    settingsMenu.error=false;
+  } else settingsMenu.turn(steps, profileCount);
 }
 
 void readButtons() {
@@ -272,7 +283,10 @@ void readButtons() {
       if ((up[6] && !longDone[0]) || (stable[6] && now-pressed[0]>=650)) {
         longDone[0]=longDone[1]=true;menuOpen.store(false);wheelEvents.store(0);generation.fetch_add(1);
       } else if (up[7] && !longDone[1]) {
-        commitProfile(menuSelection);menuOpen.store(false);wheelEvents.store(0);generation.fetch_add(1);
+        if (commitProfile(menuSelection)) {
+          menuOpen.store(false); wheelEvents.store(0); generation.fetch_add(1);
+          settingsMenu.error=false;
+        } else settingsMenu.error=true;
         longDone[0]=longDone[1]=true;
       }
       return;
@@ -311,7 +325,7 @@ void readButtons() {
   } else for (int i = 0; i < 6; ++i) if (down[i] && sdDetected) startMacro(i);
   if ((stable[6] && !longDone[0] && now - pressed[0] >= 650) ||
       (stable[7] && !longDone[1] && now - pressed[1] >= 650)) {
-    if (stable[7] && !longDone[1] && now-pressed[1]>=650) enterProfileSelector();
+    if (stable[6] && !longDone[0] && now-pressed[0]>=650) enterProfileSelector();
     else enterSettings();
     releaseToArm = true;
     longDone[0] = longDone[1] = true; wheelEvents.store(0);
@@ -382,6 +396,8 @@ void serialCommand() {
       Serial.print(",\"settings_open\":"); Serial.print(menuOpen.load() ? "true" : "false");
       Serial.print(",\"menu_kind\":"); Serial.print(menuKind);
       Serial.print(",\"settings_item\":"); Serial.print(settingsMenu.item);
+      Serial.print(",\"menu_selection\":"); Serial.print(menuSelection);
+      Serial.print(",\"menu_error\":"); Serial.print(settingsMenu.error ? "true" : "false");
       Serial.print(",\"chord_capacity\":255,\"chord_count\":"); Serial.print(profile.chordCount);
       Serial.print(",\"auxiliary_mode\":"); Serial.print(profile.auxiliaryMode);
       Serial.print(",\"last_binding_mask\":"); Serial.print(lastBindingMask);
@@ -427,8 +443,7 @@ void loop1() {
   static uint32_t wheelKeyUntil = 0;
   int steps = wheelEvents.exchange(0);
   if (menuOpen.load()) {
-    if(menuKind==1)menuSelection=constrain(menuSelection+steps,0,max(0,profileCount-1));
-    else settingsMenu.turn(steps, profileCount);
+    turnMenu(steps);
   } else if (steps && sdDetected && usb_mouse.ready()) {
     int scroll = constrain(-steps * profile.direction, -127, 127);
     if (!macroActive && profile.wheelKey && usb_keyboard.ready()) {
