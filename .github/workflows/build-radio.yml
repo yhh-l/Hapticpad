@@ -1,11 +1,11 @@
-name: Build SD indexed profiles
+name: Build Feiyu memory and 123 hold
 on:
   push:
-    branches: ['codex/sd-profile-streaming']
-    paths: ['custom/radio-v1/MacroPad/**', 'custom/radio-v1/tests/**', 'custom/sd-toolbox/**', '.github/workflows/build-radio.yml']
+    branches: ['codex/feiyu-memory-save-123']
+    paths: ['custom/radio-v1/MacroPad/**', 'custom/radio-v1/tests/**', 'custom/feiyu/host/**', '.github/workflows/build-radio.yml']
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   firmware:
     runs-on: ubuntu-latest
@@ -26,6 +26,9 @@ jobs:
       - name: Test real button dispatcher and HUD parser
         run: |
           python3 custom/radio-v1/tests/check_buttons.py
+          g++ -std=c++17 -Wall -Wextra -Werror -I custom/radio-v1/MacroPad custom/radio-v1/tests/check_feiyu.cpp -o /tmp/check-feiyu
+          /tmp/check-feiyu
+          python3 -m unittest discover -s custom/feiyu/host -p 'test_bridge.py' -v
           g++ -std=c++17 -Wall -Wextra -Werror -I custom/radio-v1/MacroPad custom/radio-v1/tests/check_hud.cpp -o /tmp/check-hud
           /tmp/check-hud
           g++ -std=c++17 -Wall -Wextra -Werror -I custom/radio-v1/MacroPad custom/radio-v1/tests/check_number_macro.cpp -o /tmp/check-number
@@ -39,5 +42,20 @@ jobs:
           sha256sum build/radio-v1/*.uf2 > build/radio-v1/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: Hapticpad-V1-CN-1.10.0-SD
+          name: Hapticpad-V1-CN-1.11.0-FEIYU
           path: build/radio-v1/
+      - name: Store built UF2 on the isolated development branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const file = fs.readdirSync('build/radio-v1').find(x => x.endsWith('.uf2'));
+            const data = fs.readFileSync('build/radio-v1/' + file);
+            const path = 'custom/radio-v1/build/Hapticpad_V1_CN_1.11.0_FEIYU.uf2';
+            const branch = context.ref.replace('refs/heads/', '');
+            let sha;
+            try { sha = (await github.rest.repos.getContent({...context.repo, path, ref: branch})).data.sha; }
+            catch (error) { if (error.status !== 404) throw error; }
+            await github.rest.repos.createOrUpdateFileContents({...context.repo, path, branch, sha,
+              message: 'Store Feiyu memory firmware build', content: data.toString('base64')});
+            console.log('SHA256 ' + require('crypto').createHash('sha256').update(data).digest('hex'));

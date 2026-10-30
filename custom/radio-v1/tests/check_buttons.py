@@ -49,6 +49,11 @@ bool readProfile(int index,Profile &out){out=profile;out.name[0]='A'+index;retur
 void setLEDProfile(){}
 struct FakeHUD{void clear(){}}radioHUD;
 constexpr int O_WRONLY=1,O_CREAT=2,O_TRUNC=4;
+constexpr int O_RDONLY=0;
+#include "feiyu_store.h"
+FeiyuSaveGesture saveGesture;
+bool saveEnabled=false;int memoryRequests=0;
+bool consumeFeiyuGesture(uint8_t mask,uint32_t time){int result=saveGesture.update(mask,time,saveEnabled,1000);if(result==2)++memoryRequests;return result!=0;}
 struct FsFile{explicit operator bool()const{return true;}void print(int){}void close(){}};
 struct FakeSD{FsFile open(const char*,int){return {};}}SD;
 void confirmMenuField(){settingsMenu.confirm();}
@@ -103,6 +108,15 @@ int main(){
  drive(56,40);drive(0,500);expect({56,49,51,56,49,54,13});
  drive(56,140);releaseKeys();drive(0,500);usb_keyboard.keys.clear();assert(!numberMacro.active()&&!macroActive);
  std::cout<<"PASS: production GPIO debounce, double/triple dispatch, no subset/held repeats, 7/8 navigation, settings isolation and long exit/save, custom pair versus all-custom\n";
+ // The new save gesture must suppress existing 1+2+3 bindings and release subsets.
+ prepare(0);saveEnabled=true;memoryRequests=0;
+ profile.chordCount=4;profile.chords[3].mask=56;strcpy(profile.chords[3].numberText,"813816");profile.chords[3].enterAfterText=true;
+ drive(7,1400);expect({});assert(memoryRequests==1&&!menuOpen);
+ drive(7,1400);expect({});assert(memoryRequests==1);
+ drive(3,100);drive(1,100);drive(0,100);expect({});assert(!menuOpen);
+ drive(7,500);drive(0,100);expect({});assert(memoryRequests==1);
+ drive(7,1400);drive(0,100);expect({});assert(memoryRequests==2);
+ drive(56,1000);drive(0,150);expect({56,49,51,56,49,54,13});
 }
 '''
 with tempfile.TemporaryDirectory(prefix='haptic-buttons-') as temp:

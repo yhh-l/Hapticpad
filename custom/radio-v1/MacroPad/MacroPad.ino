@@ -13,6 +13,7 @@
 #include "radio_hud.h"
 #include "number_macro.h"
 #include "neopixel_transport.h"
+#include "feiyu_store.h"
 
 // SD validation and FAT calls nest beyond the SDK's default core1 stack.
 // Arduino-Pico allocates a separate 8KiB stack before starting setup1.
@@ -161,6 +162,7 @@ void setup1() {
   for (uint8_t pin : buttonPins) pinMode(pin, INPUT_PULLUP);
   spiSetup(); u8g2.begin();
   loadConfiguration();
+  setupFeiyu();
   configReady.store(true);
 }
 
@@ -314,6 +316,10 @@ void readButtons() {
     }
     return;
   }
+  if (consumeFeiyuGesture((uint8_t)buttonsMask,now)) {
+    chordRecognizer.cancel(buttonsMask);longDone[0]=longDone[1]=true;
+    return;
+  }
   if (profile.auxiliaryMode) {
     uint8_t gesture = chordRecognizer.update((uint8_t)buttonsMask, now, profile.chordWindow, profile.auxiliaryMode == 1);
     if (profile.auxiliaryMode == 1 && chordRecognizer.menuPair(buttonsMask, now)) {
@@ -349,14 +355,16 @@ void printJSONString(const char *s) {
   Serial.print('"');
 }
 void serialCommand() {
-  static char buffer[192]; static unsigned used = 0; static bool overflow = false;
+  static char buffer[384]; static unsigned used = 0; static bool overflow = false;
   while (Serial.available()) {
     char c = Serial.read();
     if (c == '\r') continue;
     if (c != '\n') { if (used < sizeof(buffer) - 1 && !overflow) buffer[used++] = c; else overflow = true; continue; }
     if (overflow) { used=0; overflow=false; Serial.println("HP ERROR LENGTH"); continue; }
     buffer[used] = 0; used = 0;
-    if (!strncmp(buffer, "HP HUD ", 7)) {
+    if (handleFeiyuCommand(buffer)) {
+      // File operations run only on this core, beside existing SD users.
+    } else if (!strncmp(buffer, "HP HUD ", 7)) {
       Serial.println(radioHUD.update(buffer+7, profile.name, millis()) ? "HP OK HUD" : "HP ERROR HUD");
     } else if (!strcmp(buffer, "HP HUDOFF")) {
       radioHUD.clear(); Serial.println("HP OK HUDOFF");
@@ -455,6 +463,7 @@ void loop() {
 void loop1() {
   if (diskMode.load()) return;
   serialCommand(); readButtons();
+  tickFeiyu();
   if (deviceStandby.load()) return;
   tickMacro();
   static uint32_t wheelKeyUntil = 0;

@@ -106,6 +106,7 @@ void drawScreen() {
     u8g2.drawUTF8(0, 40, "请用网页写入配置"); return;
   }
   if (menuOpen.load()) { drawSettings(); return; }
+  if (drawFeiyuNotice()) return;
   // Single-line key labels leave a 30px centre area for profile + custom text.
   u8g2.drawHLine(0, 16, 128); u8g2.drawHLine(0, 47, 128);
   for (int x : {42, 85}) { u8g2.drawVLine(x, 0, 16); u8g2.drawVLine(x, 48, 16); }
