@@ -38,7 +38,7 @@ class Assistant:
     def __init__(self, workspace):
         self.workspace = Path(workspace).resolve()
         self.endpoint_file = Path(os.environ.get('DSH_HOME') or
-                                  str(Path(os.environ['LOCALAPPDATA']) / 'FeiyuDSH')) / 'feiyu-assistant-endpoint.json'
+                                  str(Path(os.environ.get('LOCALAPPDATA', str(Path.home() / '.local/share'))) / 'FeiyuDSH')) / 'feiyu-assistant-endpoint.json'
         self.endpoint = None
         self.state = {}
         self.pages, self.page, self.content = pages_for('1打开任务窗口\n2接着上次做\n3整理并保存'), 0, None
