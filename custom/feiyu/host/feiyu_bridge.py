@@ -291,6 +291,8 @@ def watch(link, root, assistant=None):
         if bundle['pet_id'] != state['pet_id']:
             raise MemoryConflict('Workspace identity changed')
     print('Ready: open this workspace in DSH. Hold 1+2+3 for one second to save.', flush=True)
+    atomic_json(local_path(root, '.feiyu-bridge-ready.json'), {
+        'pid': os.getpid(), 'generation': remote['generation'], 'crc32': remote['crc32']})
     while True:
         try:
             status = info(link)

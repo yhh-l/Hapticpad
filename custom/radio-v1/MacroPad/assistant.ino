@@ -1,4 +1,5 @@
 FeiyuAssistant feiyuAssistant;
+bool feiyuNumber(const char *&p,uint32_t &value,unsigned base);
 
 bool consumeAssistantGesture(uint8_t mask,uint32_t now) {
   bool consumed=feiyuAssistant.buttons(mask,now);
@@ -22,12 +23,12 @@ bool handleAssistantCommand(const char *command){
   }
   if(!strncmp(p,"ACK ",4)){
     p+=4;uint32_t id=0;
-    if(feiyuNumber(p,id) && !*p && feiyuAssistant.count && feiyuAssistant.queue[feiyuAssistant.head].id==id){feiyuAssistant.ack(id);Serial.println("HP AI OK ACK");}
+    if(feiyuNumber(p,id,10) && !*p && feiyuAssistant.count && feiyuAssistant.queue[feiyuAssistant.head].id==id){feiyuAssistant.ack(id);Serial.println("HP AI OK ACK");}
     else Serial.println("HP AI ERROR ACK");return true;
   }
   if(!strncmp(p,"PAGE ",5)){
     p+=5;uint32_t index=0,total=0;
-    if(!feiyuNumber(p,index) || *p++!=' ' || !feiyuNumber(p,total) || *p++!=' ' || !total || total>512 || index>=total){Serial.println("HP AI ERROR PAGE");return true;}
+    if(!feiyuNumber(p,index,10) || *p++!=' ' || !feiyuNumber(p,total,10) || *p++!=' ' || !total || total>512 || index>=total){Serial.println("HP AI ERROR PAGE");return true;}
     size_t size=strlen(p);char bytes[128]={};
     if(!size || size%2 || size>250){Serial.println("HP AI ERROR PAGE");return true;}
     for(unsigned i=0;i<size/2;++i){

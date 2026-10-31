@@ -92,7 +92,7 @@ class Assistant:
                     try:
                         if action == 'open': self.open()
                         elif action == 'resume': self.api('/resume', {})
-                        elif action == 'save': link.command('HP MEM SAVE')
+                        elif action == 'save' and not status.get('save_pending'): link.command('HP MEM SAVE')
                         elif action == 'next': self.page = min(len(self.pages)-1, self.page+1)
                         elif action == 'previous': self.page = max(0, self.page-1)
                     except (OSError, RuntimeError, ValueError) as error:
@@ -100,7 +100,7 @@ class Assistant:
                     self.handled = (self.handled + [event_id])[-32:]
                 if link.command(f'HP AI ACK {event_id}') != 'HP AI OK ACK':
                     raise RuntimeError('键盘操作确认失败')
-            if (self.state.get('bridge') or {}).get('saveRequested'):
+            if (self.state.get('bridge') or {}).get('saveRequested') and not status.get('save_pending'):
                 link.command('HP MEM SAVE')
             self.api('/bridge', {'connected':True, 'generation':status['generation'],
                 'dirty':dirty, 'saving':bool(self.save_id), 'error':self.error})
