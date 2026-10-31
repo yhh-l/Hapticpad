@@ -20,6 +20,23 @@ void drawFeiyuCharacter(uint8_t pose) {
   drawFeiyuPixels([](int x,int y){u8g2.drawPixel(x,y);},frame);
 }
 
+void drawFeiyuKeyLabels() {
+  u8g2.drawHLine(0,16,128);
+  u8g2.drawHLine(0,47,128);
+  for(int x : {42,85}) {
+    u8g2.drawVLine(x,0,16);
+    u8g2.drawVLine(x,48,16);
+  }
+  for(int i=0;i<6;++i) {
+    int x=i%3*43, y=i<3?0:48;
+    u8g2.setFont(u8g2_font_5x7_tf);
+    char number[2]={(char)('1'+i),0};
+    u8g2.drawStr(x+1,y+12,number);
+    u8g2.setFont(u8g2_font_wqy12_t_gb2312);
+    clipped(x+8,y+12,profile.labels[i],33);
+  }
+}
+
 void drawScreen() {
   ++feiyuScreenFrames;
   static float previousAngle=0;
@@ -29,6 +46,7 @@ void drawScreen() {
   }
   if(std::isfinite(angle)) previousAngle=angle;
   if(menuOpen.load()) {drawSettings();return;}
+  drawFeiyuKeyLabels();
   if(drawFeiyuNotice()) return;
   drawFeiyuCharacter(255);
 }

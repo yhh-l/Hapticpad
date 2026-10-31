@@ -30,7 +30,7 @@ void drawFeiyuPixels(Pixel pixel, const FeiyuScreenFrame &frame) {
   for (unsigned y=0; y<FEIYU_SPRITE_HEIGHT/2; ++y) {
     for (unsigned x=0; x<FEIYU_SPRITE_WIDTH/2; ++x) {
       const int dx=frame.x+int(x), dy=frame.y+int(y);
-      if (dx<0 || dx>=128 || dy<0 || dy>=64) continue;
+      if (dx<0 || dx>=128 || dy<17 || dy>=47) continue;
       bool lit=false;
       for(unsigned oy=0;oy<2;++oy)for(unsigned ox=0;ox<2;++ox){
         unsigned sx=x*2+ox,sy=y*2+oy;
