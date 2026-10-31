@@ -30,7 +30,13 @@ void drawScreen() {
   if(std::isfinite(angle)) previousAngle=angle;
   if(menuOpen.load()) {drawSettings();return;}
   if(drawFeiyuNotice()) return;
-  drawFeiyuCharacter(255);
+  if(drawAssistantTerminal())return;
+  uint8_t pose=255;
+  if(feiyuAssistant.fresh(screenFrameMs)){
+    if(!strcmp(feiyuAssistant.phase,"thinking") || !strcmp(feiyuAssistant.phase,"tool") || !strcmp(feiyuAssistant.phase,"saving"))pose=FEIYU_THINK;
+    else if(!strcmp(feiyuAssistant.phase,"done"))pose=FEIYU_HAPPY;
+  }
+  drawFeiyuCharacter(pose);
   if(!sdDetected) {
     u8g2.setDrawColor(0);u8g2.drawBox(0,50,128,14);u8g2.setDrawColor(1);
     u8g2.setFont(u8g2_font_wqy12_t_gb2312);

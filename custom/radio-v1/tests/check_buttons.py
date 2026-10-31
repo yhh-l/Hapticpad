@@ -51,6 +51,9 @@ struct FakeHUD{void clear(){}}radioHUD;
 constexpr int O_WRONLY=1,O_CREAT=2,O_TRUNC=4;
 constexpr int O_RDONLY=0;
 #include "feiyu_store.h"
+#include "feiyu_assistant.h"
+FeiyuAssistant feiyuAssistant;
+bool consumeAssistantGesture(uint8_t mask,uint32_t time){return feiyuAssistant.buttons(mask,time);}
 FeiyuSaveGesture saveGesture;
 bool saveEnabled=false;int memoryRequests=0;
 bool consumeFeiyuGesture(uint8_t mask,uint32_t time){int result=saveGesture.update(mask,time,saveEnabled,1000);if(result==2)++memoryRequests;return result!=0;}
@@ -116,6 +119,13 @@ int main(){
  drive(3,100);drive(1,100);drive(0,100);expect({});assert(!menuOpen);
  drive(7,500);drive(0,100);expect({});assert(memoryRequests==1);
  drive(7,1400);drive(0,100);expect({});assert(memoryRequests==2);
+ drive(56,1000);drive(0,150);expect({56,49,51,56,49,54,13});
+ // Assistant mode must route real button edges without typing into the active application.
+ drive(41,1400);expect({});assert(feiyuAssistant.mode);
+ drive(0,100);drive(2,120);drive(0,100);expect({});
+ assert(feiyuAssistant.count==2);
+ drive(7,1400);drive(0,100);expect({});assert(memoryRequests==3);
+ drive(32,120);drive(0,100);expect({});assert(!feiyuAssistant.mode);
  drive(56,1000);drive(0,150);expect({56,49,51,56,49,54,13});
 }
 '''

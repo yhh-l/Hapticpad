@@ -15,6 +15,7 @@
 #include "neopixel_transport.h"
 #include "feiyu_store.h"
 #include "feiyu_screen.h"
+#include "feiyu_assistant.h"
 
 // SD validation and FAT calls nest beyond the SDK's default core1 stack.
 // Arduino-Pico allocates a separate 8KiB stack before starting setup1.
@@ -24,6 +25,7 @@ extern ConfigIndex configIndex;
 extern uint32_t screenFrameMs, petQuoteId, petQuoteCount;
 extern uint32_t feiyuScreenFrames;
 extern uint8_t feiyuScreenPose;
+extern FeiyuAssistant feiyuAssistant;
 SdFat SD;
 U8G2_SSD1309_128X64_NONAME0_F_4W_SW_SPI u8g2(U8G2_R0, 28, 22, 6, 7, 8);
 BLDCMotor motor(7);
@@ -323,6 +325,9 @@ void readButtons() {
     chordRecognizer.cancel(buttonsMask);longDone[0]=longDone[1]=true;
     return;
   }
+  if (consumeAssistantGesture((uint8_t)buttonsMask,now)) {
+    chordRecognizer.cancel(buttonsMask);longDone[0]=longDone[1]=true;return;
+  }
   if (profile.auxiliaryMode) {
     uint8_t gesture = chordRecognizer.update((uint8_t)buttonsMask, now, profile.chordWindow, profile.auxiliaryMode == 1);
     if (profile.auxiliaryMode == 1 && chordRecognizer.menuPair(buttonsMask, now)) {
@@ -365,7 +370,7 @@ void serialCommand() {
     if (c != '\n') { if (used < sizeof(buffer) - 1 && !overflow) buffer[used++] = c; else overflow = true; continue; }
     if (overflow) { used=0; overflow=false; Serial.println("HP ERROR LENGTH"); continue; }
     buffer[used] = 0; used = 0;
-    if (handleFeiyuCommand(buffer)) {
+    if (handleAssistantCommand(buffer) || handleFeiyuCommand(buffer)) {
       // File operations run only on this core, beside existing SD users.
     } else if (!strncmp(buffer, "HP HUD ", 7)) {
       Serial.println(radioHUD.update(buffer+7, profile.name, millis()) ? "HP OK HUD" : "HP ERROR HUD");
@@ -484,6 +489,8 @@ void loop1() {
   int steps = wheelEvents.exchange(0);
   if (menuOpen.load()) {
     turnMenu(steps);
+  } else if(feiyuAssistant.mode) {
+    turnAssistant(steps);
   } else if (steps && sdDetected && usb_mouse.ready()) {
     int scroll = constrain(-steps * profile.direction, -127, 127);
     if (!macroActive && profile.wheelKey && usb_keyboard.ready()) {

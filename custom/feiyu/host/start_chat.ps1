@@ -43,8 +43,17 @@ if ($feiyuExistingBridge.Count -eq 0) {
     @{pid=$feiyuBridgeProcess.Id;workspace=$feiyuWorkspace} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:DSH_HOME 'feiyu-bridge-process.json') -Encoding utf8
 }
 if ($feiyuRunningChat) {
+    $feiyuEndpointPath=Join-Path $env:DSH_HOME 'feiyu-assistant-endpoint.json'
+    if(Test-Path -LiteralPath $feiyuEndpointPath){
+        $feiyuEndpoint=Get-Content -LiteralPath $feiyuEndpointPath -Raw|ConvertFrom-Json
+        if([int]$feiyuEndpoint.pid -eq [int]$feiyuPrevious.pid){
+            Start-Process -FilePath ($feiyuEndpoint.url+'/#'+$feiyuEndpoint.token)
+            Write-Output 'Bigfish assistant terminal opened; keyboard bridge checked.'
+            return
+        }
+    }
     Start-Process -FilePath ('http://127.0.0.1:' + $feiyuPrevious.port + '/')
-    Write-Output 'Bigfish chat is already running; keyboard bridge checked.'
+    Write-Output 'Bigfish is running. Restart the existing host to load the assistant terminal update.'
     return
 }
 $feiyuPort = 3087
@@ -52,4 +61,16 @@ if (Get-NetTCPConnection -State Listen -LocalPort $feiyuPort -ErrorAction Silent
 $feiyuArguments = '"' + $feiyuCli + '" web --patch "' + (Join-Path $PSScriptRoot 'feiyu.chat.patch.yml') + '" --host 127.0.0.1 --port ' + $feiyuPort
 $feiyuChat = Start-Process -FilePath $feiyuNode -ArgumentList $feiyuArguments -WorkingDirectory $feiyuWorkspace -WindowStyle Hidden -RedirectStandardOutput (Join-Path $feiyuLogs 'chat.stdout.log') -RedirectStandardError (Join-Path $feiyuLogs 'chat.stderr.log') -PassThru
 @{pid=$feiyuChat.Id;port=$feiyuPort;workspace=$feiyuWorkspace} | ConvertTo-Json | Set-Content -LiteralPath $feiyuProcessFile -Encoding utf8
-Write-Output 'Bigfish chat is starting; the browser will open automatically.'
+$feiyuEndpointPath=Join-Path $env:DSH_HOME 'feiyu-assistant-endpoint.json'
+for($feiyuAttempt=0;$feiyuAttempt -lt 32;$feiyuAttempt++){
+    Start-Sleep -Milliseconds 300
+    if(Test-Path -LiteralPath $feiyuEndpointPath){
+        $feiyuEndpoint=Get-Content -LiteralPath $feiyuEndpointPath -Raw|ConvertFrom-Json
+        if([int]$feiyuEndpoint.pid -eq $feiyuChat.Id){
+            Start-Process -FilePath ($feiyuEndpoint.url+'/#'+$feiyuEndpoint.token)
+            Write-Output 'Bigfish assistant terminal opened.'
+            return
+        }
+    }
+}
+Write-Output 'Bigfish host started; assistant terminal is still initializing. Reopen the desktop shortcut in a moment.'

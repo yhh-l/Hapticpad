@@ -271,7 +271,7 @@ def pull(link, root):
     return metadata
 
 
-def watch(link, root):
+def watch(link, root, assistant=None):
     waiting = False
     while True:
         try:
@@ -295,25 +295,40 @@ def watch(link, root):
         try:
             status = info(link)
         except OSError as error:
+            if assistant:
+                assistant.disconnected()
             print('Keyboard connection interrupted; reconnecting:', error, flush=True)
             time.sleep(2)
             continue
+        if assistant:
+            local = load_state(root)
+            dirty = local is None or fingerprint(local_files(root)) != local.get('hashes')
+            assistant.tick(link, status, dirty)
         if status['save_pending']:
             request = status['save_request']
             try:
+                if assistant and not assistant.prepare_save(request):
+                    time.sleep(0.5)
+                    continue
                 saved = push(link, root)
                 answer = link.command(f"HP MEM ACK {request} {saved['generation']}")
                 if answer != 'HP MEM OK ACK':
                     raise RuntimeError('Save acknowledgement rejected')
                 print('Saved and read back generation', saved['generation'], flush=True)
+                if assistant:
+                    assistant.saved()
             except OSError as error:
                 with contextlib.suppress(Exception):
                     link.command(f'HP MEM FAIL {request}')
                 print('Save not confirmed; release keys and hold 1+2+3 again:', error, flush=True)
-            except Exception:
+            except Exception as error:
                 with contextlib.suppress(Exception):
                     link.command(f'HP MEM FAIL {request}')
-                raise
+                if assistant:
+                    assistant.failed(error)
+                    print('Save not confirmed:', error, flush=True)
+                else:
+                    raise
         time.sleep(0.5)
 
 
@@ -331,7 +346,8 @@ def main():
         elif args.operation == 'request-save':
             print(link.command('HP MEM SAVE'))
         elif args.operation == 'watch':
-            watch(link, args.workspace)
+            from feiyu_assistant import Assistant
+            watch(link, args.workspace, Assistant(args.workspace))
         else:
             result = pull(link, args.workspace) if args.operation == 'pull' else push(
                 link, args.workspace, initialize=args.operation == 'init')
