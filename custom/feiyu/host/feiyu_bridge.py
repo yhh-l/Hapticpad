@@ -172,7 +172,8 @@ class SerialLink:
             raise OSError('Keyboard serial service stopped')
         result = json.loads(line)
         if not result.get('ok'):
-            raise OSError(result.get('error', 'Serial request failed'))
+            operation = ' '.join(command.split()[:3])
+            raise OSError(operation + ': ' + result.get('error', 'Serial request failed'))
         response = result['response']
         if response.startswith('HP MEM ERROR '):
             raise RuntimeError(response)
@@ -271,7 +272,16 @@ def pull(link, root):
 
 
 def watch(link, root):
-    remote = info(link)
+    waiting = False
+    while True:
+        try:
+            remote = info(link)
+            break
+        except OSError:
+            if not waiting:
+                print('Keyboard not connected; waiting for the matching device.', flush=True)
+                waiting = True
+            time.sleep(2)
     state = load_state(root)
     if not state or state['generation'] != remote['generation'] or state['crc32'] != remote['crc32']:
         pull(link, root)
@@ -282,7 +292,12 @@ def watch(link, root):
             raise MemoryConflict('Workspace identity changed')
     print('Ready: open this workspace in DSH. Hold 1+2+3 for one second to save.', flush=True)
     while True:
-        status = info(link)
+        try:
+            status = info(link)
+        except OSError as error:
+            print('Keyboard connection interrupted; reconnecting:', error, flush=True)
+            time.sleep(2)
+            continue
         if status['save_pending']:
             request = status['save_request']
             try:
@@ -291,6 +306,10 @@ def watch(link, root):
                 if answer != 'HP MEM OK ACK':
                     raise RuntimeError('Save acknowledgement rejected')
                 print('Saved and read back generation', saved['generation'], flush=True)
+            except OSError as error:
+                with contextlib.suppress(Exception):
+                    link.command(f'HP MEM FAIL {request}')
+                print('Save not confirmed; release keys and hold 1+2+3 again:', error, flush=True)
             except Exception:
                 with contextlib.suppress(Exception):
                     link.command(f'HP MEM FAIL {request}')

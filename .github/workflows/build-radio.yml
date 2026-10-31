@@ -1,7 +1,7 @@
-name: Build Feiyu memory and 123 hold
+name: Build Bigfish OLED screen
 on:
   push:
-    branches: ['codex/feiyu-memory-save-123']
+    branches: ['codex/feiyu-screen']
     paths: ['custom/radio-v1/MacroPad/**', 'custom/radio-v1/tests/**', 'custom/feiyu/host/**', '.github/workflows/build-radio.yml']
   workflow_dispatch:
 permissions:
@@ -23,8 +23,10 @@ jobs:
           arduino-cli core update-index --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
           arduino-cli core install rp2040:rp2040@6.3.1 --additional-urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
           arduino-cli lib install 'Simple FOC@2.3.5' 'U8g2@2.35.30' 'Adafruit NeoPixel@1.15.5' 'FastLED@3.9.15'
-      - name: Test real button dispatcher and HUD parser
+      - name: Test OLED rendering, buttons, SD, and memory
         run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -I custom/radio-v1/MacroPad custom/radio-v1/tests/check_feiyu_screen.cpp -o /tmp/check-screen
+          /tmp/check-screen
           python3 custom/radio-v1/tests/check_buttons.py
           g++ -std=c++17 -Wall -Wextra -Werror -I custom/radio-v1/MacroPad custom/radio-v1/tests/check_feiyu.cpp -o /tmp/check-feiyu
           /tmp/check-feiyu
@@ -42,7 +44,7 @@ jobs:
           sha256sum build/radio-v1/*.uf2 > build/radio-v1/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: Hapticpad-V1-CN-1.11.0-FEIYU
+          name: Hapticpad-V1-CN-1.12.0-FEIYU
           path: build/radio-v1/
       - name: Store built UF2 on the isolated development branch
         uses: actions/github-script@v7
@@ -51,7 +53,7 @@ jobs:
             const fs = require('fs');
             const file = fs.readdirSync('build/radio-v1').find(x => x.endsWith('.uf2'));
             const data = fs.readFileSync('build/radio-v1/' + file);
-            const path = 'custom/radio-v1/build/Hapticpad_V1_CN_1.11.0_FEIYU.uf2';
+            const path = 'custom/radio-v1/build/Hapticpad_V1_CN_1.12.0_FEIYU.uf2';
             const branch = context.ref.replace('refs/heads/', '');
             let sha;
             try { sha = (await github.rest.repos.getContent({...context.repo, path, ref: branch})).data.sha; }

@@ -14,6 +14,7 @@
 #include "number_macro.h"
 #include "neopixel_transport.h"
 #include "feiyu_store.h"
+#include "feiyu_screen.h"
 
 // SD validation and FAT calls nest beyond the SDK's default core1 stack.
 // Arduino-Pico allocates a separate 8KiB stack before starting setup1.
@@ -21,6 +22,8 @@ bool core1_separate_stack = true;
 extern int minimumStorageStackFree;
 extern ConfigIndex configIndex;
 extern uint32_t screenFrameMs, petQuoteId, petQuoteCount;
+extern uint32_t feiyuScreenFrames;
+extern uint8_t feiyuScreenPose;
 SdFat SD;
 U8G2_SSD1309_128X64_NONAME0_F_4W_SW_SPI u8g2(U8G2_R0, 28, 22, 6, 7, 8);
 BLDCMotor motor(7);
@@ -372,6 +375,15 @@ void serialCommand() {
       const char *number=buffer+11;char *end=nullptr;long index=strtol(number,&end,10);
       if(!*number || *number<'0' || *number>'9' || *end || index<0 || index>=profileCount || diskMode.load() || menuOpen.load())Serial.println("HP ERROR PROFILE");
       else Serial.println(commitProfile(index)?"HP OK PROFILE":"HP ERROR PROFILE");
+    } else if (!strcmp(buffer, "HP SCREEN")) {
+      if(diskMode.load()){Serial.println("HP SCREEN ERROR MODE");}
+      else {
+        Serial.print("HP SCREEN ");
+        const uint8_t *pixels=u8g2.getBufferPtr();
+        const char *hex="0123456789abcdef";
+        for(unsigned i=0;i<1024;++i){Serial.print(hex[pixels[i]>>4]);Serial.print(hex[pixels[i]&15]);}
+        Serial.println();
+      }
     } else if (!strcmp(buffer, "HP INFO")) {
       Serial.print("HP INFO {\"version\":\""); Serial.print(FW_VERSION);
       Serial.print("\",\"profile\":"); printJSONString(profile.name);
@@ -412,6 +424,8 @@ void serialCommand() {
       Serial.print(",\"flywheel_load_stop\":"); Serial.print(flywheelLoadStop.load()?"true":"false");
       Serial.print(",\"pet_quote_id\":"); Serial.print(petQuoteId);
       Serial.print(",\"pet_quote_count\":"); Serial.print(petQuoteCount);
+      Serial.print(",\"screen_scene\":\"feiyu\",\"screen_frames\":");Serial.print(feiyuScreenFrames);
+      Serial.print(",\"screen_pose\":");Serial.print(feiyuScreenPose);
       Serial.print(",\"standby\":"); Serial.print(deviceStandby.load()?"true":"false");
       Serial.print(",\"idle_ms\":"); Serial.print(idleTimer.elapsed(millis()));
       Serial.print(",\"standby_after_ms\":180000");
@@ -494,7 +508,7 @@ void loop1() {
     }
   }
   if (millis() - frameAt >= 100) {
-    frameAt = millis(); screenFrameMs = frameAt; updatePetSpeech(frameAt); u8g2.clearBuffer();
+    frameAt = millis(); screenFrameMs = frameAt; u8g2.clearBuffer();
     drawScreen();
     // Send one 8-pixel strip at a time, sampling buttons between strips.
     // A short tap must not wait for a complete OLED transfer.

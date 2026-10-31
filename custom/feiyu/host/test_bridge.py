@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 import zlib
 
 spec = importlib.util.spec_from_file_location('feiyu_bridge', Path(__file__).with_name('feiyu_bridge.py'))
@@ -120,6 +121,33 @@ class BridgeTests(unittest.TestCase):
         bundle['pet_id'] = '11111111-1111-4111-8111-111111111111'
         with self.assertRaises(ValueError):
             bridge.validate_bundle(bundle)
+
+    def test_watch_survives_transport_loss_and_only_acknowledges_verified_save(self):
+        metadata = bridge.push(self.link, self.first, initialize=True)
+        first_request = dict(metadata, save_pending=True, save_request=1)
+        retry_request = dict(metadata, save_pending=True, save_request=2)
+        transport = Mock()
+        transport.command.side_effect = ['HP MEM OK FAIL', 'HP MEM OK ACK']
+        with patch.object(bridge, 'info', side_effect=[metadata, OSError('disconnected'),
+                                                    first_request, retry_request]), \
+                patch.object(bridge, 'push', side_effect=[OSError('lost write reply'),
+                                                         {'generation': 2}]), \
+                patch.object(bridge.time, 'sleep', side_effect=[None, None, StopIteration]), \
+                patch('builtins.print'):
+            with self.assertRaises(StopIteration):
+                bridge.watch(transport, self.first)
+        self.assertEqual([call.args[0] for call in transport.command.call_args_list],
+                         ['HP MEM FAIL 1', 'HP MEM ACK 2 2'])
+
+    def test_watch_started_without_keyboard_waits_for_reconnection(self):
+        metadata = bridge.push(self.link, self.first, initialize=True)
+        with patch.object(bridge, 'info', side_effect=[OSError('not plugged in'),
+                                                    metadata, dict(metadata, save_pending=False)]), \
+                patch.object(bridge.time, 'sleep', side_effect=[None, StopIteration]), \
+                patch('builtins.print'):
+            with self.assertRaises(StopIteration):
+                bridge.watch(self.link, self.first)
+        self.assertEqual(bridge.load_state(self.first)['generation'], 1)
 
 
 if __name__ == '__main__':
