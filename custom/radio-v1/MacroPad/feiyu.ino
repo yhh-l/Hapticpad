@@ -38,9 +38,8 @@ bool drawFeiyuNotice() {
     !strcmp(feiyuState,"failed")?"记忆保存失败":
     !strcmp(feiyuState,"offline")?"助手未连接":"等待助手保存";
   drawFeiyuCharacter(!strcmp(feiyuState,"saved")?FEIYU_HAPPY:FEIYU_THINK);
-  u8g2.setDrawColor(0);u8g2.drawBox(0,50,128,14);u8g2.setDrawColor(1);
-  u8g2.setFont(u8g2_font_wqy12_t_gb2312);
-  u8g2.drawUTF8((128-u8g2.getUTF8Width(text))/2,62,text);return true;
+  (void)text;
+  return true;
 }
 bool feiyuNumber(const char *&p,uint32_t &value,unsigned base=10) {
   if(!*p)return false;value=0;unsigned digits=0;

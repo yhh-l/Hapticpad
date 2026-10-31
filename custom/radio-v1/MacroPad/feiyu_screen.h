@@ -4,7 +4,7 @@
 
 struct FeiyuScreenFrame {
   uint8_t pose=FEIYU_IDLE;
-  int x=36, y=2;
+  int x=50, y=17;
 };
 
 inline FeiyuScreenFrame feiyuScreenFrame(uint32_t now, uint32_t idleMs, bool reacting) {
@@ -27,11 +27,16 @@ inline FeiyuScreenFrame feiyuScreenFrame(uint32_t now, uint32_t idleMs, bool rea
 template<class Pixel>
 void drawFeiyuPixels(Pixel pixel, const FeiyuScreenFrame &frame) {
   if (frame.pose >= FEIYU_SPRITE_COUNT) return;
-  for (unsigned y=0; y<FEIYU_SPRITE_HEIGHT; ++y) {
-    for (unsigned x=0; x<FEIYU_SPRITE_WIDTH; ++x) {
+  for (unsigned y=0; y<FEIYU_SPRITE_HEIGHT/2; ++y) {
+    for (unsigned x=0; x<FEIYU_SPRITE_WIDTH/2; ++x) {
       const int dx=frame.x+int(x), dy=frame.y+int(y);
       if (dx<0 || dx>=128 || dy<0 || dy>=64) continue;
-      if (feiyuSpriteBits[frame.pose][y*FEIYU_SPRITE_STRIDE+x/8] & (1u<<(x%8))) pixel(dx,dy);
+      bool lit=false;
+      for(unsigned oy=0;oy<2;++oy)for(unsigned ox=0;ox<2;++ox){
+        unsigned sx=x*2+ox,sy=y*2+oy;
+        lit=lit || (feiyuSpriteBits[frame.pose][sy*FEIYU_SPRITE_STRIDE+sx/8] & (1u<<(sx%8)));
+      }
+      if(lit)pixel(dx,dy);
     }
   }
 }

@@ -17,7 +17,8 @@ int main() {
             assert(x>=0 && x<128 && y>=0 && y<64);
             assert(pixels.insert({x,y}).second);
           },frame);
-          assert(pixels.size()>200 && pixels.size()<2000);
+          assert(pixels.size()>50 && pixels.size()<840);
+          for(const auto &p:pixels){assert(p.first>=49 && p.first<=78 && p.second>=17 && p.second<48);}
           if(!active && idle>=60000)assert(frame.pose==FEIYU_SLEEPY);
         }
       }
